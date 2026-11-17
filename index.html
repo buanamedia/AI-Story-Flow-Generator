@@ -1,3 +1,5 @@
+<!DOCTYPE html>
+<html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,43 +12,96 @@
       font-family: 'Inter', sans-serif; 
       background-color: #0b0b12 !important; 
       color: #f8fafc !important;
+      margin: 0;
     }
-    .font-mono { font-family: 'Fira+Code', monospace; }
+    .font-mono { font-family: 'Fira Code', monospace; }
     
     /* Dark theme matching 0xFlow AI Story interface */
-    select, option, textarea, input {
+    select, option, textarea, input[type="text"], input[type="password"] {
       background-color: #13131f !important;
       color: #f1f5f9 !important;
-      border-color: #26263a !important;
+      border: 1px solid #26263a !important;
     }
-    textarea:focus, select:focus {
+    textarea:focus, select:focus, input:focus {
       border-color: #8b5cf6 !important;
       outline: none !important;
     }
     .bg-slate-950 { background-color: #0b0b12 !important; }
-    .bg-slate-900\/60, .bg-slate-900 { background-color: #13131f !important; }
+    .bg-slate-900\/90, .bg-slate-900 { background-color: #13131f !important; }
     .border-slate-800 { border-color: #26263a !important; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
 
   <!-- Header -->
-  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 py-3.5 flex flex-col sm:flex-row justify-between items-center gap-4">
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 py-3.5 flex flex-wrap justify-between items-center gap-3">
       <div class="flex items-center gap-3">
         <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-purple-500/20">
           <i class="fa-solid fa-wand-magic-sparkles"></i>
         </div>
         <div>
           <h1 class="text-lg font-bold text-white tracking-tight">AI Story & Flow Asset Generator</h1>
-          <p class="text-[11px] text-slate-400">Reference Assets (`asset_001+`) & Continuous Scenes (`scene_001+`) with Synchronized Audio</p>
+          <p class="text-[11px] text-slate-400">Reference Assets (<code>asset_001+</code>) & Continuous Scenes (<code>scene_001+</code>)</p>
         </div>
       </div>
-      <div class="flex items-center gap-2">
-        <span class="text-[11px] bg-purple-950/70 text-purple-300 border border-purple-800/70 px-2.5 py-1 rounded-lg font-mono">Format: 0xFlow / Veo Native Audio</span>
+      
+      <!-- Settings & Status Controls -->
+      <div class="flex items-center gap-2.5">
+        <button type="button" onclick="openApiModal()" class="flex items-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-medium text-slate-200 transition shadow-sm">
+          <i class="fa-solid fa-gear text-amber-400"></i>
+          <span>API Settings</span>
+          <span id="api-count-badge" class="bg-emerald-950 text-emerald-300 border border-emerald-700/70 px-1.5 py-0.5 rounded-md font-mono text-[10px]">0 Keys</span>
+        </button>
+        <span class="hidden sm:inline-block text-[11px] bg-purple-950/70 text-purple-300 border border-purple-800/70 px-2.5 py-1.5 rounded-xl font-mono">0xFlow / Veo Native</span>
       </div>
     </div>
   </header>
+
+  <!-- Multi-API Key Settings Modal -->
+  <div id="api-settings-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-key text-amber-400"></i>
+          <h3 class="text-sm font-bold text-white">Pengaturan Multi Gemini API Key</h3>
+        </div>
+        <button type="button" onclick="closeApiModal()" class="text-slate-400 hover:text-white text-sm px-2 py-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-400 leading-relaxed">
+        Tambahkan satu atau beberapa <strong>Gemini API Key</strong> sekaligus (pisahkan dengan baris baru / Enter atau koma). Jika API Key pertama mencapai batas kuota (<em>rate limit</em>), sistem otomatis berpindah ke API Key berikutnya.
+      </p>
+
+      <div class="space-y-2">
+        <label for="bulk-api-input" class="text-[11px] font-semibold text-slate-300 block">Masukkan API Key (Bisa Banyak Sekaligus):</label>
+        <textarea id="bulk-api-input" rows="4" placeholder="AIzaSy...&#10;AIzaSy...&#10;AIzaSy..." class="w-full rounded-xl p-3 font-mono text-xs text-emerald-300 leading-relaxed resize-y"></textarea>
+        <div class="flex justify-end">
+          <button type="button" onclick="addBulkApiKeys()" class="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition flex items-center gap-1.5">
+            <i class="fa-solid fa-plus"></i> Tambahkan ke Daftar
+          </button>
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-semibold text-slate-300">Daftar API Key Aktif (<span id="modal-key-count">0</span>):</span>
+          <button type="button" onclick="clearAllApiKeys()" class="text-[11px] text-rose-400 hover:text-rose-300 underline">Hapus Semua</button>
+        </div>
+        <div id="api-keys-list" class="max-h-40 overflow-y-auto space-y-1.5 bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+          <p class="text-[11px] text-slate-500 text-center py-3">Belum ada API Key tersimpan.</p>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
+        <button type="button" onclick="closeApiModal()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition">
+          Selesai & Simpan
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Main Content -->
   <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -58,7 +113,7 @@
           <h2 class="text-sm font-semibold flex items-center gap-2 text-purple-400">
             <i class="fa-solid fa-feather-pointed"></i> Naskah Cerita
           </h2>
-          <button id="btn-sample-story" class="text-xs text-purple-400 hover:text-purple-300 underline font-medium flex items-center gap-1">
+          <button type="button" id="btn-sample-story" class="text-xs text-purple-400 hover:text-purple-300 underline font-medium flex items-center gap-1">
             <i class="fa-solid fa-lightbulb"></i> Isi Contoh Cerita
           </button>
         </div>
@@ -135,10 +190,12 @@
             <span>Karakter: <strong id="char-count" class="text-slate-200">0</strong></span>
             <span>Kata: <strong id="word-count" class="text-slate-200">0</strong></span>
           </div>
-          <span class="text-[10px] text-emerald-400 flex items-center gap-1"><i class="fa-solid fa-sparkles"></i> Powered by Gemini AI</span>
+          <button type="button" onclick="openApiModal()" id="api-status-indicator" class="text-[10px] text-amber-400 hover:underline flex items-center gap-1">
+            <i class="fa-solid fa-key"></i> Atur API Key
+          </button>
         </div>
 
-        <button id="btn-generate" class="w-full mt-4 py-2.5 px-5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-purple-600/30 transition transform active:scale-95 flex items-center justify-center gap-2">
+        <button type="button" id="btn-generate" class="w-full mt-4 py-2.5 px-5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-purple-600/30 transition transform active:scale-95 flex items-center justify-center gap-2">
           <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Reference Assets & Scenes
         </button>
       </div>
@@ -162,7 +219,7 @@
         <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
           <div class="flex items-center gap-2">
             <span class="bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">Reference Images</span>
-            <h2 class="text-sm font-semibold text-slate-200">Karakter & Lokasi Cerita</h2>
+            <h2 class="text-sm font-semibold text-slate-200">Karakter, Lokasi & Properti Cerita</h2>
           </div>
           <span id="assetBadge" class="text-[11px] text-slate-400 font-mono">0 Assets</span>
         </div>
@@ -197,6 +254,9 @@ Asap rokok tebal masih mengepul di bibir sumur yang kini kosong. Bambang mengend
 
 Ratna dan Bambang berlari ke beranda depan rumah dan mendapati pintu depan sudah terbuka lebar ke arah kabut subuh. Ratna bertanya ketakutan, "Mas, pintu depan sudah terbuka dari tadi?"`;
 
+    // In-memory state for Gemini API keys (safe across all iframe/sandboxed browsers)
+    let savedApiKeys = [];
+
     // DOM Elements
     const storyInput = document.getElementById('story-input');
     const charCount = document.getElementById('char-count');
@@ -211,6 +271,101 @@ Ratna dan Bambang berlari ke beranda depan rumah dan mendapati pintu depan sudah
     const genreSelect = document.getElementById('genre-select');
     const languageSelect = document.getElementById('language-select');
     const sceneCountSelect = document.getElementById('scene-count-select');
+
+    function openApiModal() {
+      renderApiKeyList();
+      document.getElementById('api-settings-modal').classList.remove('hidden');
+    }
+
+    function closeApiModal() {
+      const pendingRaw = document.getElementById('bulk-api-input').value.trim();
+      if (pendingRaw) {
+        addBulkApiKeys();
+      }
+      document.getElementById('api-settings-modal').classList.add('hidden');
+    }
+
+    function addBulkApiKeys() {
+      const textarea = document.getElementById('bulk-api-input');
+      const raw = textarea.value.trim();
+      if (!raw) {
+        showToast('Masukkan minimal satu API Key.');
+        return;
+      }
+      const parsed = raw.split(/[\n,;]+/).map(k => k.trim()).filter(Boolean);
+      let addedCount = 0;
+      parsed.forEach(k => {
+        if (!savedApiKeys.includes(k)) {
+          savedApiKeys.push(k);
+          addedCount++;
+        }
+      });
+      textarea.value = '';
+      renderApiKeyList();
+      updateApiBadges();
+      showToast(`${addedCount} API Key berhasil ditambahkan!`);
+    }
+
+    function removeApiKey(index) {
+      savedApiKeys.splice(index, 1);
+      renderApiKeyList();
+      updateApiBadges();
+    }
+
+    function clearAllApiKeys() {
+      savedApiKeys = [];
+      renderApiKeyList();
+      updateApiBadges();
+      showToast('Semua API Key dihapus.');
+    }
+
+    function updateApiBadges() {
+      const badge = document.getElementById('api-count-badge');
+      const indicator = document.getElementById('api-status-indicator');
+      const count = savedApiKeys.length;
+      if (badge) {
+        badge.textContent = `${count} ${count === 1 ? 'Key' : 'Keys'}`;
+      }
+      if (indicator) {
+        if (count > 0) {
+          indicator.className = 'text-[10px] text-emerald-400 hover:underline flex items-center gap-1';
+          indicator.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${count} Gemini API Key Aktif`;
+        } else {
+          indicator.className = 'text-[10px] text-amber-400 hover:underline flex items-center gap-1';
+          indicator.innerHTML = `<i class="fa-solid fa-key"></i> Atur API Key (${count})`;
+        }
+      }
+    }
+
+    function renderApiKeyList() {
+      const listEl = document.getElementById('api-keys-list');
+      const countEl = document.getElementById('modal-key-count');
+      if (countEl) countEl.textContent = savedApiKeys.length;
+      if (!listEl) return;
+
+      if (savedApiKeys.length === 0) {
+        listEl.innerHTML = `<p class="text-[11px] text-slate-500 text-center py-3">Belum ada API Key tersimpan. Masukkan di kolom atas.</p>`;
+        return;
+      }
+
+      listEl.innerHTML = savedApiKeys.map((k, idx) => {
+        const masked = k.length > 10 ? `${k.slice(0, 6)}••••••••${k.slice(-4)}` : '••••••••';
+        return `
+          <div class="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-mono bg-purple-950 text-purple-300 border border-purple-800/70 px-1.5 py-0.5 rounded">#${idx + 1}</span>
+              <span class="font-mono text-emerald-300 text-[11px]">${masked}</span>
+              ${idx === 0 ? '<span class="text-[9px] bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded">PRIMARY</span>' : ''}
+            </div>
+            <button type="button" onclick="removeApiKey(${idx})" class="text-slate-400 hover:text-rose-400 text-xs px-1" title="Hapus Key">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    updateApiBadges();
 
     storyInput.addEventListener('input', () => {
       const val = storyInput.value;
@@ -237,35 +392,89 @@ Ratna dan Bambang berlari ke beranda depan rumah dan mendapati pintu depan sudah
       const langSpec = getLanguageSpec(selectedLang, text);
       const stylePrefix = getStylePrefix(genre);
 
-      // UI Loading State
       const originalBtnHtml = btnGenerate.innerHTML;
       btnGenerate.disabled = true;
-      btnGenerate.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Gemini AI sedang menganalisis cerita & menyusun prompt...`;
+      btnGenerate.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Menganalisis cerita & menyusun prompt...`;
 
       try {
-        const aiResult = await analyzeStoryWithGemini(text, stylePrefix, ratio, langSpec, targetSceneCount);
+        const aiResult = await analyzeStoryWithGeminiMultiKey(text, stylePrefix, ratio, langSpec, targetSceneCount, savedApiKeys);
+        const normalized = ensurePropsMappedInScenes(aiResult);
         emptyState.classList.add('hidden');
 
-        const allAssets = renderReferenceAssetsFromAI(aiResult.assets, stylePrefix, ratio);
-        renderScenesFromAI(aiResult.scenes, allAssets, stylePrefix, ratio, langSpec);
+        const allAssets = renderReferenceAssetsFromAI(normalized.assets, stylePrefix, ratio);
+        renderScenesFromAI(normalized.scenes, allAssets, stylePrefix, ratio, langSpec);
         showToast('Berhasil di-generate menggunakan Gemini AI!');
       } catch (err) {
-        // Fallback otomatis cerdas jika lingkungan preview offline / API key belum terinjeksi
         const fallbackResult = analyzeStoryLocallySmart(text, stylePrefix, ratio, langSpec, targetSceneCount);
+        const normalized = ensurePropsMappedInScenes(fallbackResult);
         emptyState.classList.add('hidden');
 
-        const allAssets = renderReferenceAssetsFromAI(fallbackResult.assets, stylePrefix, ratio);
-        renderScenesFromAI(fallbackResult.scenes, allAssets, stylePrefix, ratio, langSpec);
-        showToast('Berhasil di-generate (Smart Local Mode)!');
+        const allAssets = renderReferenceAssetsFromAI(normalized.assets, stylePrefix, ratio);
+        renderScenesFromAI(normalized.scenes, allAssets, stylePrefix, ratio, langSpec);
+        showToast(savedApiKeys.length > 0 ? 'API limit/error, beralih ke Smart Local Engine!' : 'Berhasil di-generate (Smart Local Engine)!');
       } finally {
         btnGenerate.disabled = false;
         btnGenerate.innerHTML = originalBtnHtml;
       }
     });
 
-    async function analyzeStoryWithGemini(storyText, stylePrefix, ratio, langSpec, targetSceneCount) {
-      const apiKey = "";
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+    function ensurePropsMappedInScenes(result) {
+      if (!result || !Array.isArray(result.assets) || !Array.isArray(result.scenes)) return result;
+
+      result.assets.forEach((a, idx) => {
+        if (!a.id) a.id = `asset_${String(idx + 1).padStart(3, '0')}`;
+      });
+
+      const propAssets = result.assets.filter(a => a.type && a.type.toLowerCase() === 'prop');
+
+      result.scenes.forEach((scene, sIdx) => {
+        if (!Array.isArray(scene.usedAssetIds)) scene.usedAssetIds = [];
+        const combinedSceneText = `${scene.narrationAndDialogue || ''} ${scene.caption || ''} ${scene.imagePrompt || ''}`.toLowerCase();
+
+        propAssets.forEach(prop => {
+          const propKeywords = prop.name.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+          const isMatched = propKeywords.some(kw => combinedSceneText.includes(kw));
+          if ((isMatched || propAssets.length <= 2) && !scene.usedAssetIds.includes(prop.id)) {
+            scene.usedAssetIds.push(prop.id);
+          }
+        });
+
+        if (propAssets.length > 0 && !scene.usedAssetIds.some(id => propAssets.some(p => p.id === id))) {
+          const fallbackProp = propAssets[sIdx % propAssets.length];
+          scene.usedAssetIds.push(fallbackProp.id);
+        }
+
+        const activePropsInScene = propAssets.filter(p => scene.usedAssetIds.includes(p.id));
+        if (activePropsInScene.length > 0) {
+          const propPromptNote = activePropsInScene.map(p => `${p.id} (${p.name}: ${p.visualDescription})`).join('; ');
+          if (scene.imagePrompt && !scene.imagePrompt.includes(activePropsInScene[0].id)) {
+            scene.imagePrompt += ` Include key props: ${propPromptNote}.`;
+          }
+          if (scene.videoPrompt && !scene.videoPrompt.includes(activePropsInScene[0].id)) {
+            scene.videoPrompt += `\nKEY PROPS LOCKED IN SCENE — ${propPromptNote}.`;
+          }
+        }
+      });
+
+      return result;
+    }
+
+    async function analyzeStoryWithGeminiMultiKey(storyText, stylePrefix, ratio, langSpec, targetSceneCount, keysList) {
+      const keysToTry = keysList.length > 0 ? keysList : [''];
+      let lastError = null;
+
+      for (let i = 0; i < keysToTry.length; i++) {
+        try {
+          return await callGeminiSingleKey(storyText, stylePrefix, ratio, langSpec, targetSceneCount, keysToTry[i]);
+        } catch (err) {
+          lastError = err;
+        }
+      }
+      throw lastError || new Error('All API keys failed');
+    }
+
+    async function callGeminiSingleKey(storyText, stylePrefix, ratio, langSpec, targetSceneCount, apiKey) {
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${encodeURIComponent(apiKey)}`;
 
       const sceneCountInstruction = targetSceneCount === 'auto'
         ? 'Divide the story naturally into logical sequential scenes (between 3 to 6 scenes).'
@@ -276,7 +485,7 @@ Analyze the user's story carefully and extract clean, natural, sensible assets a
 
 CRITICAL RULES FOR ASSETS:
 1. Extract ONLY real characters, real locations, and key objects/props actually mentioned or implied in the story.
-2. Give each asset a clean, sensible, human-readable name (e.g., "Ratna", "Bambang", "Sosok Tanpa Kepala", "Sumur Batu Tua", "Beranda Rumah Adat", "Lampu Minyak Tua"). NEVER use random adjectives, random verbs, or generic words as names.
+2. Give each asset a clean, sensible, human-readable name (e.g., "Ratna", "Bambang", "Sosok Tanpa Kepala", "Sumur Batu Tua", "Beranda Rumah Adat", "Lampu Minyak Tua").
 3. Categorize each asset strictly as "Character", "Location", or "Prop".
 4. For "Character" assets: write detailed physical appearance & outfit in English suitable for a two-view reference sheet (portrait close-up + full-body standing pose on plain neutral light-gray background). Also provide voice description in ${langSpec.langName} (${langSpec.accent} accent).
 5. For "Location" assets: write rich environment description in English (foreground, midground, background, lighting, NO characters).
@@ -285,10 +494,10 @@ CRITICAL RULES FOR ASSETS:
 CRITICAL RULES FOR SCENES:
 1. ${sceneCountInstruction}
 2. Every scene must connect seamlessly as one continuous story from scene 1 to the final scene.
-3. For each scene, list the exact asset IDs ("asset_001", "asset_002", etc.) actually present in that scene.
+3. For each scene, list ALL exact asset IDs ("asset_001", "asset_002", etc.)—including Characters, Locations, AND Props—present in that scene inside usedAssetIds.
 4. Provide natural narration and character dialogues in ${langSpec.langName} matching the story plot.
-5. Write a cohesive Start Frame image prompt in English referencing the active assets and visual style (${stylePrefix}), aspect ratio ${ratio}.
-6. Write a complete 10-second Google Flow / Veo All-In-One video prompt in English with exact timestamps ([00:00-00:03], [00:03-00:07], [00:07-00:10]), synchronized ${langSpec.langName} voice-over narration & lip-sync dialogues, camera angles, character screen sides (camera LEFT / camera RIGHT), SFX, EXCLUDE rules, and SAFETY rules.
+5. Write a cohesive Start Frame image prompt in English referencing the active characters, location, AND props, using visual style (${stylePrefix}), aspect ratio ${ratio}.
+6. Write a complete 10-second Google Flow / Veo All-In-One video prompt in English with exact timestamps ([00:00-00:03], [00:03-00:07], [00:07-00:10]), synchronized ${langSpec.langName} voice-over narration & lip-sync dialogues, camera angles, character screen sides (camera LEFT / camera RIGHT), active props, SFX, EXCLUDE rules, and SAFETY rules.
 
 Visual Style: ${stylePrefix}
 Aspect Ratio: ${ratio}
@@ -345,29 +554,20 @@ ${storyText}`;
         }
       };
 
-      const delays = [1000, 2000];
-      for (let attempt = 0; attempt <= delays.length; attempt++) {
-        try {
-          const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const data = await response.json();
-          let rawJson = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (!rawJson) throw new Error('Empty response');
-          rawJson = rawJson.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-          return JSON.parse(rawJson);
-        } catch (error) {
-          if (attempt === delays.length) throw error;
-          await new Promise(res => setTimeout(res, delays[attempt]));
-        }
-      }
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json();
+      let rawJson = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawJson) throw new Error('Empty response');
+      rawJson = rawJson.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+      return JSON.parse(rawJson);
     }
 
     function analyzeStoryLocallySmart(storyText, stylePrefix, ratio, langSpec, targetSceneCount) {
-      // 1. Smart Character Extraction (Strict proper names & known archetypes)
       const stopWords = new Set([
         'menjelang', 'subuh', 'tiba', 'dari', 'balik', 'tampak', 'panik', 'dan', 'lalu', 'berteriak',
         'memanggil', 'bergegas', 'masuk', 'membawa', 'memeriksa', 'berkata', 'asap', 'rokok', 'tebal',
@@ -383,7 +583,6 @@ ${storyText}`;
       const sentences = storyText.split(/(?<=[.!?])\s+/);
 
       sentences.forEach(s => {
-        // Cari kata berhuruf kapital di tengah kalimat (nama orang) atau setelah sapaan Mas/Pak/Bu/Mbak
         const greetingMatches = s.matchAll(/\b(?:Mas|Mbak|Pak|Bu|Bang|Kak)\s+([A-Z][a-z]{2,15})\b/g);
         for (const m of greetingMatches) {
           const name = m[1];
@@ -410,7 +609,7 @@ ${storyText}`;
       const assets = [];
       let assetIdx = 1;
 
-      detectedCharNames.forEach((name, idx) => {
+      detectedCharNames.forEach((name) => {
         const isHeadless = /tanpa kepala|headless/i.test(name);
         const isFemale = /(ratna|dewi|siti|ayu|sri|putri|naya|ani|rina|maya|laras|tari|wulan|fitri|indah|nur)/i.test(name);
         let desc = '';
@@ -436,7 +635,6 @@ ${storyText}`;
         });
       });
 
-      // 2. Smart Location Extraction
       const locationRules = [
         { regex: /sumur|well/i, name: 'Ruang Sumur Batu Tua', desc: 'foreground stone floor, midground circular mossy stone well with wooden bucket and hemp rope, damp brick walls and an open arched doorway leading to the hallway, lit by a single flickering hanging kerosene oil lamp casting deep shadows' },
         { regex: /beranda|teras|porch|pintu depan/i, name: 'Beranda Depan & Pintu Kayu Tua', desc: 'foreground tiled porch veranda, midground wooden railing and porch steps leading down to mist-covered yard, background tall vintage shuttered wooden entrance door standing ajar, lit by dim hanging porch lantern' },
@@ -465,7 +663,6 @@ ${storyText}`;
         });
       }
 
-      // 3. Smart Prop Extraction
       const propRules = [
         { regex: /lampu minyak|lentera|lantern|kerosene/i, name: 'Lampu Minyak Tua', desc: 'antique brass and glass kerosene oil lantern with warm flickering flame' },
         { regex: /rokok|bara api|cigarette|abu rokok/i, name: 'Rokok & Bara Api Menyala', desc: 'half-burned hand-rolled kretek cigarette with glowing orange ember and curling grey smoke' },
@@ -485,7 +682,6 @@ ${storyText}`;
         }
       });
 
-      // 4. Split Story into Continuous Scenes
       let rawChunks = storyText.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
       if (targetSceneCount !== 'auto') {
         const count = parseInt(targetSceneCount, 10);
@@ -507,7 +703,6 @@ ${storyText}`;
         const sceneNum = i + 1;
         const sceneId = `scene_${String(sceneNum).padStart(3, '0')}`;
 
-        // Match assets relevant to this chunk
         const activeAssets = assets.filter(a => {
           if (a.type === 'Character') {
             return chunk.toLowerCase().includes(a.name.toLowerCase()) ||
@@ -521,12 +716,11 @@ ${storyText}`;
           if (a.type === 'Prop') {
             if (/lampu|lentera/i.test(chunk) && /lampu/i.test(a.name)) return true;
             if (/rokok|bara|abu/i.test(chunk) && /rokok/i.test(a.name)) return true;
-            if (/ember|timba/i.test(chunk) && /ember/i.test(a.name)) return true;
+            if (/ember|timba|menimba/i.test(chunk) && /ember/i.test(a.name)) return true;
           }
           return false;
         });
 
-        // Ensure at least 1 character and 1 location in every scene
         if (!activeAssets.some(a => a.type === 'Character')) {
           const firstChar = assets.find(a => a.type === 'Character');
           if (firstChar) activeAssets.unshift(firstChar);
@@ -538,10 +732,10 @@ ${storyText}`;
 
         const activeChars = activeAssets.filter(a => a.type === 'Character');
         const activeLoc = activeAssets.find(a => a.type === 'Location') || assets.find(a => a.type === 'Location');
+        const activeProps = activeAssets.filter(a => a.type === 'Prop');
         const cLeft = activeChars[0];
         const cRight = activeChars[1];
 
-        // Extract dialogues vs narration
         const quoteMatches = [...chunk.matchAll(/["“]([^"”]+)["”]/g)].map(m => m[1].trim());
         const narrationPart = chunk.replace(/["“][^"”]+["”]/g, '').replace(/\s+/g, ' ').trim();
 
@@ -556,8 +750,11 @@ ${storyText}`;
 
         const caption = narrationPart || chunk;
         const charNamesStr = activeChars.map(c => c.name).join(' and ');
+        const propsDescStr = activeProps.length > 0
+          ? ` Props featured: ${activeProps.map(p => `${p.name} [${p.id}] (${p.visualDescription})`).join(', ')}.`
+          : '';
 
-        const imagePrompt = `${stylePrefix}, ${ratio} START FRAME of scene ${sceneNum}. Location: ${activeLoc ? activeLoc.name + ' (' + activeLoc.visualDescription + ')' : 'traditional dim interior'}. ${cLeft ? `${cLeft.name} stands on camera LEFT (${cLeft.visualDescription})` : ''}${cRight ? `, facing ${cRight.name} positioned on camera RIGHT (${cRight.visualDescription})` : ''}. Action moment: ${caption}. Keep character faces, outfits, and props strictly consistent with reference assets (${activeAssets.map(a => a.id).join(', ')}). No text, no subtitles, no watermark.`;
+        const imagePrompt = `${stylePrefix}, ${ratio} START FRAME of scene ${sceneNum}. Location: ${activeLoc ? activeLoc.name + ' (' + activeLoc.visualDescription + ')' : 'traditional dim interior'}. ${cLeft ? `${cLeft.name} stands on camera LEFT (${cLeft.visualDescription})` : ''}${cRight ? `, facing ${cRight.name} positioned on camera RIGHT (${cRight.visualDescription})` : ''}.${propsDescStr} Action moment: ${caption}. Keep character faces, outfits, and props strictly consistent with reference assets (${activeAssets.map(a => a.id).join(', ')}). No text, no subtitles, no watermark.`;
 
         const spokenLine = quoteMatches.length > 0 ? quoteMatches[0] : (narrationPart || chunk);
         const speakerLabel = quoteMatches.length > 0 && cLeft ? cLeft.name : 'Narrator';
@@ -567,7 +764,7 @@ OUTPUT — ${stylePrefix}, exactly 10 seconds, ${ratio}, with synchronized natur
 STORY — Continuing seamlessly from scene ${Math.max(1, sceneNum - 1)}: ${chunk}
 START FRAME — The supplied image (${sceneId}) is this scene's exact first frame featuring ${charNamesStr} in ${activeLoc ? activeLoc.name : 'the scene location'}. Animate forward smoothly from it; keep every face, outfit, prop (${activeAssets.map(a => a.id).join(', ')}), and background locked.
 OPENING STATE — ${caption}
-CHARACTERS & ASSETS —
+CHARACTERS, LOCATIONS & PROPS —
 ${activeAssets.map((a, idx) => `${a.id} (${a.name} — ${a.type}) — ${a.visualDescription}${a.type === 'Character' ? `. Screen side: camera ${idx % 2 === 0 ? 'LEFT' : 'RIGHT'}.` : ''}`).join('\n')}
 TIMELINE
 [00:00-00:02.5] SHOT 1 — Establishing medium shot, subtle camera push-in. ${cLeft ? `${cLeft.name} reacts in ${activeLoc ? activeLoc.name : 'the room'}` : 'Atmospheric tension builds'}. ${quoteMatches.length === 0 ? `Narrator voice-over in ${langSpec.langName} (${langSpec.accent} accent): "${spokenLine}"` : 'Silent visual hook; mouths closed. Audio: natural room tone and subtle footsteps.'}
@@ -616,7 +813,6 @@ SAFETY — Original fictional adult characters only. No real people, no celebrit
         return map[selectedLang];
       }
 
-      // Auto-detect based on common Indonesian vs English words
       const isIndo = /\b(dan|yang|di|ke|dari|ini|itu|dengan|untuk|tidak|ada|menjelang|subuh|sumur|pintu|berteriak|berkata)\b/i.test(fullText);
       return isIndo
         ? { langName: 'Indonesian', accent: 'Indonesian' }
@@ -673,7 +869,7 @@ SAFETY — Original fictional adult characters only. No real people, no celebrit
               <span class="text-[10px] px-2 py-0.5 rounded border ${typeBadgeClass} font-semibold uppercase">${asset.type}</span>
               <span class="text-xs font-semibold text-white">${asset.name}</span>
             </div>
-            <button onclick="copyFieldText('${assetId}_prompt')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium border border-slate-700 transition flex items-center gap-1.5">
+            <button type="button" onclick="copyFieldText('${assetId}_prompt')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium border border-slate-700 transition flex items-center gap-1.5">
               <i class="fa-regular fa-copy"></i> Copy Image Prompt
             </button>
           </div>
@@ -719,7 +915,12 @@ SAFETY — Original fictional adult characters only. No real people, no celebrit
         const assetBadgesHtml = usedIds.map(id => {
           const found = allAssets.find(a => a.id === id);
           const label = found ? `${id} (${found.name})` : id;
-          return `<span class="text-[10px] font-mono bg-purple-950/80 text-purple-300 border border-purple-700/60 px-2 py-0.5 rounded-md">${label}</span>`;
+          const badgeStyle = found && found.type === 'Prop'
+            ? 'bg-amber-950/80 text-amber-300 border-amber-700/60'
+            : found && found.type === 'Location'
+              ? 'bg-sky-950/80 text-sky-300 border-sky-700/60'
+              : 'bg-purple-950/80 text-purple-300 border-purple-700/60';
+          return `<span class="text-[10px] font-mono ${badgeStyle} border px-2 py-0.5 rounded-md">${label}</span>`;
         }).join('');
 
         const card = document.createElement('div');
@@ -748,7 +949,7 @@ SAFETY — Original fictional adult characters only. No real people, no celebrit
                 <i class="fa-solid fa-upload"></i> Pilih File Start Frame
                 <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event, '${sceneId}_img', '${sceneId}_preview_box')" />
               </label>
-              <button onclick="copyFieldText('${sceneId}_video')" class="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-1.5">
+              <button type="button" onclick="copyFieldText('${sceneId}_video')" class="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-1.5">
                 <i class="fa-regular fa-copy"></i> Copy Video Prompt
               </button>
             </div>
@@ -758,7 +959,7 @@ SAFETY — Original fictional adult characters only. No real people, no celebrit
               <div>
                 <div class="flex justify-between items-center mb-1">
                   <label class="text-[11px] font-semibold text-sky-400">Narration / dialogue (${langSpec.langName})</label>
-                  <button onclick="copyFieldText('${sceneId}_narration')" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
+                  <button type="button" onclick="copyFieldText('${sceneId}_narration')" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
                     <i class="fa-regular fa-copy"></i> Copy
                   </button>
                 </div>
@@ -768,7 +969,7 @@ SAFETY — Original fictional adult characters only. No real people, no celebrit
               <div>
                 <div class="flex justify-between items-center mb-1">
                   <label class="text-[11px] font-semibold text-slate-300">Caption</label>
-                  <button onclick="copyFieldText('${sceneId}_caption')" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
+                  <button type="button" onclick="copyFieldText('${sceneId}_caption')" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
                     <i class="fa-regular fa-copy"></i> Copy
                   </button>
                 </div>
@@ -778,7 +979,7 @@ SAFETY — Original fictional adult characters only. No real people, no celebrit
               <div>
                 <div class="flex justify-between items-center mb-1">
                   <label class="text-[11px] font-semibold text-amber-400">Image prompt (Nano Banana Start Frame)</label>
-                  <button onclick="copyFieldText('${sceneId}_image')" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
+                  <button type="button" onclick="copyFieldText('${sceneId}_image')" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
                     <i class="fa-regular fa-copy"></i> Copy
                   </button>
                 </div>
@@ -788,7 +989,7 @@ SAFETY — Original fictional adult characters only. No real people, no celebrit
               <div>
                 <div class="flex justify-between items-center mb-1">
                   <label class="text-[11px] font-semibold text-emerald-400">Video prompt (Google Flow / Veo Native Audio)</label>
-                  <button onclick="copyFieldText('${sceneId}_video')" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
+                  <button type="button" onclick="copyFieldText('${sceneId}_video')" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
                     <i class="fa-regular fa-copy"></i> Copy
                   </button>
                 </div>
