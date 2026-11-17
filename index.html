@@ -250,7 +250,13 @@ Ratna dan Bambang berlari ke beranda depan rumah dan mendapati pintu depan sudah
         renderScenesFromAI(aiResult.scenes, allAssets, stylePrefix, ratio, langSpec);
         showToast('Berhasil di-generate menggunakan Gemini AI!');
       } catch (err) {
-        showToast('Terjadi kendala koneksi AI, silakan coba klik Generate kembali.');
+        // Fallback otomatis cerdas jika lingkungan preview offline / API key belum terinjeksi
+        const fallbackResult = analyzeStoryLocallySmart(text, stylePrefix, ratio, langSpec, targetSceneCount);
+        emptyState.classList.add('hidden');
+
+        const allAssets = renderReferenceAssetsFromAI(fallbackResult.assets, stylePrefix, ratio);
+        renderScenesFromAI(fallbackResult.scenes, allAssets, stylePrefix, ratio, langSpec);
+        showToast('Berhasil di-generate (Smart Local Mode)!');
       } finally {
         btnGenerate.disabled = false;
         btnGenerate.innerHTML = originalBtnHtml;
@@ -265,7 +271,7 @@ Ratna dan Bambang berlari ke beranda depan rumah dan mendapati pintu depan sudah
         ? 'Divide the story naturally into logical sequential scenes (between 3 to 6 scenes).'
         : `Divide the story into EXACTLY ${targetSceneCount} sequential scenes that flow continuously from beginning to end.`;
 
-      const systemInstruction = `You are an expert AI Film Director, Storyboard Artist, and Google Flow / Veo Prompt Engineer.
+      const promptText = `You are an expert AI Film Director, Storyboard Artist, and Google Flow / Veo Prompt Engineer.
 Analyze the user's story carefully and extract clean, natural, sensible assets and sequential 10-second video scenes.
 
 CRITICAL RULES FOR ASSETS:
@@ -282,17 +288,20 @@ CRITICAL RULES FOR SCENES:
 3. For each scene, list the exact asset IDs ("asset_001", "asset_002", etc.) actually present in that scene.
 4. Provide natural narration and character dialogues in ${langSpec.langName} matching the story plot.
 5. Write a cohesive Start Frame image prompt in English referencing the active assets and visual style (${stylePrefix}), aspect ratio ${ratio}.
-6. Write a complete 10-second Google Flow / Veo All-In-One video prompt in English with exact timestamps ([00:00-00:03], [00:03-00:07], [00:07-00:10]), synchronized ${langSpec.langName} voice-over narration & lip-sync dialogues, camera angles, character screen sides (camera LEFT / camera RIGHT), SFX, EXCLUDE rules, and SAFETY rules.`;
+6. Write a complete 10-second Google Flow / Veo All-In-One video prompt in English with exact timestamps ([00:00-00:03], [00:03-00:07], [00:07-00:10]), synchronized ${langSpec.langName} voice-over narration & lip-sync dialogues, camera angles, character screen sides (camera LEFT / camera RIGHT), SFX, EXCLUDE rules, and SAFETY rules.
+
+Visual Style: ${stylePrefix}
+Aspect Ratio: ${ratio}
+Target Spoken Language & Accent: ${langSpec.langName} (${langSpec.accent})
+
+Story Text:
+${storyText}`;
 
       const payload = {
         contents: [{
-          parts: [{
-            text: `Visual Style: ${stylePrefix}\nAspect Ratio: ${ratio}\nTarget Spoken Language & Accent: ${langSpec.langName} (${langSpec.accent})\n\nStory Text:\n${storyText}`
-          }]
+          role: "user",
+          parts: [{ text: promptText }]
         }],
-        systemInstruction: {
-          parts: [{ text: systemInstruction }]
-        },
         generationConfig: {
           responseMimeType: "application/json",
           responseSchema: {
@@ -336,7 +345,7 @@ CRITICAL RULES FOR SCENES:
         }
       };
 
-      const delays = [1000, 2000, 4000];
+      const delays = [1000, 2000];
       for (let attempt = 0; attempt <= delays.length; attempt++) {
         try {
           const response = await fetch(apiUrl, {
@@ -346,8 +355,9 @@ CRITICAL RULES FOR SCENES:
           });
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           const data = await response.json();
-          const rawJson = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          let rawJson = data?.candidates?.[0]?.content?.parts?.[0]?.text;
           if (!rawJson) throw new Error('Empty response');
+          rawJson = rawJson.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
           return JSON.parse(rawJson);
         } catch (error) {
           if (attempt === delays.length) throw error;
@@ -356,293 +366,484 @@ CRITICAL RULES FOR SCENES:
       }
     }
 
+    function analyzeStoryLocallySmart(storyText, stylePrefix, ratio, langSpec, targetSceneCount) {
+      // 1. Smart Character Extraction (Strict proper names & known archetypes)
+      const stopWords = new Set([
+        'menjelang', 'subuh', 'tiba', 'dari', 'balik', 'tampak', 'panik', 'dan', 'lalu', 'berteriak',
+        'memanggil', 'bergegas', 'masuk', 'membawa', 'memeriksa', 'berkata', 'asap', 'rokok', 'tebal',
+        'masih', 'mengepul', 'mengendus', 'bau', 'hanya', 'abu', 'tidak', 'ada', 'siapa', 'berlari',
+        'mendapati', 'pintu', 'depan', 'sudah', 'terbuka', 'bertanya', 'ketakutan', 'di', 'ke', 'yang',
+        'ini', 'itu', 'dengan', 'pada', 'dalam', 'untuk', 'saat', 'ketika', 'sebuah', 'seorang', 'sang',
+        'the', 'in', 'on', 'at', 'from', 'suddenly', 'then', 'when', 'while', 'as', 'there', 'here',
+        'mas', 'mbak', 'pak', 'bu', 'bang', 'kak', 'dek', 'lihat', 'ayo', 'jangan', 'keluar', 'tolong',
+        'cinematic', 'indonesian', 'dark', 'horror', 'drama', 'scene', 'story'
+      ]);
+
+      const charMap = new Map();
+      const sentences = storyText.split(/(?<=[.!?])\s+/);
+
+      sentences.forEach(s => {
+        // Cari kata berhuruf kapital di tengah kalimat (nama orang) atau setelah sapaan Mas/Pak/Bu/Mbak
+        const greetingMatches = s.matchAll(/\b(?:Mas|Mbak|Pak|Bu|Bang|Kak)\s+([A-Z][a-z]{2,15})\b/g);
+        for (const m of greetingMatches) {
+          const name = m[1];
+          if (!stopWords.has(name.toLowerCase())) charMap.set(name, true);
+        }
+
+        const words = s.replace(/["'“”‘’.,!?;:()]/g, '').split(/\s+/);
+        words.forEach((w, i) => {
+          if (i > 0 && /^[A-Z][a-z]{2,14}$/.test(w) && !stopWords.has(w.toLowerCase())) {
+            charMap.set(w, true);
+          }
+        });
+      });
+
+      if (/tanpa kepala|headless/i.test(storyText)) {
+        charMap.set('Sosok Tanpa Kepala', true);
+      }
+
+      const detectedCharNames = Array.from(charMap.keys()).slice(0, 4);
+      if (detectedCharNames.length === 0) {
+        detectedCharNames.push('Tokoh Utama', 'Tokoh Pendamping');
+      }
+
+      const assets = [];
+      let assetIdx = 1;
+
+      detectedCharNames.forEach((name, idx) => {
+        const isHeadless = /tanpa kepala|headless/i.test(name);
+        const isFemale = /(ratna|dewi|siti|ayu|sri|putri|naya|ani|rina|maya|laras|tari|wulan|fitri|indah|nur)/i.test(name);
+        let desc = '';
+        let voice = '';
+
+        if (isHeadless) {
+          desc = 'eerie headless male silhouette figure wearing dark traditional Javanese shirt and dark sarong, slumped posture, mysterious shadowy aura';
+          voice = 'Silent eerie presence, no spoken words';
+        } else if (isFemale) {
+          desc = `adult ${langSpec.accent} woman in her late 20s, oval face, expressive dark eyes, neat low hair bun, wearing traditional vintage moss-green floral kebaya blouse and dark batik sarong wrap skirt`;
+          voice = `Clear, expressive ${langSpec.accent} female voice in her late 20s`;
+        } else {
+          desc = `adult ${langSpec.accent} man in his mid-30s, square jaw, alert dark eyes, side-parted wavy black hair, wearing vintage collarless beige button-up shirt and dark woven sarong`;
+          voice = `Deep, grounded ${langSpec.accent} male voice in his mid-30s`;
+        }
+
+        assets.push({
+          id: `asset_${String(assetIdx++).padStart(3, '0')}`,
+          type: 'Character',
+          name,
+          visualDescription: desc,
+          voiceProfile: voice
+        });
+      });
+
+      // 2. Smart Location Extraction
+      const locationRules = [
+        { regex: /sumur|well/i, name: 'Ruang Sumur Batu Tua', desc: 'foreground stone floor, midground circular mossy stone well with wooden bucket and hemp rope, damp brick walls and an open arched doorway leading to the hallway, lit by a single flickering hanging kerosene oil lamp casting deep shadows' },
+        { regex: /beranda|teras|porch|pintu depan/i, name: 'Beranda Depan & Pintu Kayu Tua', desc: 'foreground tiled porch veranda, midground wooden railing and porch steps leading down to mist-covered yard, background tall vintage shuttered wooden entrance door standing ajar, lit by dim hanging porch lantern' },
+        { regex: /kamar|bedroom|ruang tidur/i, name: 'Kamar Tidur Klasik', desc: 'vintage wooden four-poster bed with mosquito net, antique wooden wardrobe, dim warm bedside lamp casting long shadows across wooden floor' },
+        { regex: /dapur|kitchen/i, name: 'Dapur Tradisional Tua', desc: 'traditional brick stove hearth, hanging clay pots, wooden shelves, dim warm firelight glow and subtle smoke haze' },
+        { regex: /hutan|forest|jalan|kuburan/i, name: 'Jalan Setapak Berkabut', desc: 'narrow dirt footpath flanked by dense tropical trees, thick pre-dawn mist, moonlight filtering through branches' }
+      ];
+
+      locationRules.forEach(rule => {
+        if (rule.regex.test(storyText)) {
+          assets.push({
+            id: `asset_${String(assetIdx++).padStart(3, '0')}`,
+            type: 'Location',
+            name: rule.name,
+            visualDescription: rule.desc
+          });
+        }
+      });
+
+      if (!assets.some(a => a.type === 'Location')) {
+        assets.push({
+          id: `asset_${String(assetIdx++).padStart(3, '0')}`,
+          type: 'Location',
+          name: 'Ruangan Utama Rumah Tradisional',
+          visualDescription: 'dimly lit vintage wooden interior hall, carved wooden pillars, atmospheric dust motes in warm tungsten key light'
+        });
+      }
+
+      // 3. Smart Prop Extraction
+      const propRules = [
+        { regex: /lampu minyak|lentera|lantern|kerosene/i, name: 'Lampu Minyak Tua', desc: 'antique brass and glass kerosene oil lantern with warm flickering flame' },
+        { regex: /rokok|bara api|cigarette|abu rokok/i, name: 'Rokok & Bara Api Menyala', desc: 'half-burned hand-rolled kretek cigarette with glowing orange ember and curling grey smoke' },
+        { regex: /ember|timba|bucket/i, name: 'Ember Kayu & Tali Tambang', desc: 'weathered rustic wooden well bucket tied to thick coarse hemp rope' },
+        { regex: /foto|potret|portrait|bingkai/i, name: 'Bingkai Foto Keluarga Tua', desc: 'aged dark mahogany wooden picture frame holding a faded sepia vintage family portrait' },
+        { regex: /keris|pisau|pedang|knife/i, name: 'Keris Pusaka Klasik', desc: 'ornate traditional wavy-blade kris dagger with carved wooden sheath' }
+      ];
+
+      propRules.forEach(rule => {
+        if (rule.regex.test(storyText)) {
+          assets.push({
+            id: `asset_${String(assetIdx++).padStart(3, '0')}`,
+            type: 'Prop',
+            name: rule.name,
+            visualDescription: rule.desc
+          });
+        }
+      });
+
+      // 4. Split Story into Continuous Scenes
+      let rawChunks = storyText.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+      if (targetSceneCount !== 'auto') {
+        const count = parseInt(targetSceneCount, 10);
+        const allSentences = storyText.match(/[^.!?]+[.!?]+(?:\s*["”])?|[^.!?]+$/g) || [storyText];
+        const cleanSentences = allSentences.map(s => s.trim()).filter(Boolean);
+        rawChunks = [];
+        const perChunk = Math.max(1, Math.ceil(cleanSentences.length / count));
+        for (let i = 0; i < count; i++) {
+          const slice = cleanSentences.slice(i * perChunk, (i + 1) * perChunk);
+          if (slice.length > 0) {
+            rawChunks.push(slice.join(' '));
+          } else {
+            rawChunks.push(cleanSentences[cleanSentences.length - 1]);
+          }
+        }
+      }
+
+      const scenes = rawChunks.map((chunk, i) => {
+        const sceneNum = i + 1;
+        const sceneId = `scene_${String(sceneNum).padStart(3, '0')}`;
+
+        // Match assets relevant to this chunk
+        const activeAssets = assets.filter(a => {
+          if (a.type === 'Character') {
+            return chunk.toLowerCase().includes(a.name.toLowerCase()) ||
+              (a.name === 'Sosok Tanpa Kepala' && /tanpa kepala|siluet|sosok/i.test(chunk));
+          }
+          if (a.type === 'Location') {
+            if (/sumur/i.test(chunk) && /sumur/i.test(a.name)) return true;
+            if (/beranda|pintu/i.test(chunk) && /beranda/i.test(a.name)) return true;
+            return i === 0 && assets.filter(x => x.type === 'Location')[0]?.id === a.id;
+          }
+          if (a.type === 'Prop') {
+            if (/lampu|lentera/i.test(chunk) && /lampu/i.test(a.name)) return true;
+            if (/rokok|bara|abu/i.test(chunk) && /rokok/i.test(a.name)) return true;
+            if (/ember|timba/i.test(chunk) && /ember/i.test(a.name)) return true;
+          }
+          return false;
+        });
+
+        // Ensure at least 1 character and 1 location in every scene
+        if (!activeAssets.some(a => a.type === 'Character')) {
+          const firstChar = assets.find(a => a.type === 'Character');
+          if (firstChar) activeAssets.unshift(firstChar);
+        }
+        if (!activeAssets.some(a => a.type === 'Location')) {
+          const firstLoc = assets.find(a => a.type === 'Location');
+          if (firstLoc) activeAssets.push(firstLoc);
+        }
+
+        const activeChars = activeAssets.filter(a => a.type === 'Character');
+        const activeLoc = activeAssets.find(a => a.type === 'Location') || assets.find(a => a.type === 'Location');
+        const cLeft = activeChars[0];
+        const cRight = activeChars[1];
+
+        // Extract dialogues vs narration
+        const quoteMatches = [...chunk.matchAll(/["“]([^"”]+)["”]/g)].map(m => m[1].trim());
+        const narrationPart = chunk.replace(/["“][^"”]+["”]/g, '').replace(/\s+/g, ' ').trim();
+
+        let narrationAndDialogue = '';
+        if (narrationPart && quoteMatches.length > 0) {
+          narrationAndDialogue = `[Narrator]: ${narrationPart}\n[Dialogue]: "${quoteMatches.join(' ')}"`;
+        } else if (quoteMatches.length > 0) {
+          narrationAndDialogue = `[Dialogue]: "${quoteMatches.join(' ')}"`;
+        } else {
+          narrationAndDialogue = `[Narrator]: ${chunk}`;
+        }
+
+        const caption = narrationPart || chunk;
+        const charNamesStr = activeChars.map(c => c.name).join(' and ');
+
+        const imagePrompt = `${stylePrefix}, ${ratio} START FRAME of scene ${sceneNum}. Location: ${activeLoc ? activeLoc.name + ' (' + activeLoc.visualDescription + ')' : 'traditional dim interior'}. ${cLeft ? `${cLeft.name} stands on camera LEFT (${cLeft.visualDescription})` : ''}${cRight ? `, facing ${cRight.name} positioned on camera RIGHT (${cRight.visualDescription})` : ''}. Action moment: ${caption}. Keep character faces, outfits, and props strictly consistent with reference assets (${activeAssets.map(a => a.id).join(', ')}). No text, no subtitles, no watermark.`;
+
+        const spokenLine = quoteMatches.length > 0 ? quoteMatches[0] : (narrationPart || chunk);
+        const speakerLabel = quoteMatches.length > 0 && cLeft ? cLeft.name : 'Narrator';
+
+        const videoPrompt = `STORY SCENE ${sceneNum} — 10-SECOND SCENE
+OUTPUT — ${stylePrefix}, exactly 10 seconds, ${ratio}, with synchronized natural ${langSpec.langName} audio (${langSpec.accent} accent). No background music.
+STORY — Continuing seamlessly from scene ${Math.max(1, sceneNum - 1)}: ${chunk}
+START FRAME — The supplied image (${sceneId}) is this scene's exact first frame featuring ${charNamesStr} in ${activeLoc ? activeLoc.name : 'the scene location'}. Animate forward smoothly from it; keep every face, outfit, prop (${activeAssets.map(a => a.id).join(', ')}), and background locked.
+OPENING STATE — ${caption}
+CHARACTERS & ASSETS —
+${activeAssets.map((a, idx) => `${a.id} (${a.name} — ${a.type}) — ${a.visualDescription}${a.type === 'Character' ? `. Screen side: camera ${idx % 2 === 0 ? 'LEFT' : 'RIGHT'}.` : ''}`).join('\n')}
+TIMELINE
+[00:00-00:02.5] SHOT 1 — Establishing medium shot, subtle camera push-in. ${cLeft ? `${cLeft.name} reacts in ${activeLoc ? activeLoc.name : 'the room'}` : 'Atmospheric tension builds'}. ${quoteMatches.length === 0 ? `Narrator voice-over in ${langSpec.langName} (${langSpec.accent} accent): "${spokenLine}"` : 'Silent visual hook; mouths closed. Audio: natural room tone and subtle footsteps.'}
+[00:02.5-00:07.5] SHOT 2 — Medium close-up on ${cLeft ? cLeft.name : 'the focal subject'}. ${quoteMatches.length > 0 ? `${speakerLabel} looks intently and speaks in ${langSpec.langName} (${langSpec.accent} accent) with emotional delivery: "${spokenLine}"` : `Camera tracks closely as the action unfolds while Narrator continues in ${langSpec.langName}: "${spokenLine}"`}
+[00:07.5-00:10] SHOT 3 — Reaction shot / Breather. ${cRight ? `${cRight.name} reacts tensely on camera RIGHT` : `${cLeft ? cLeft.name : 'Subject'} holds tense expression`}. No dialogue; mouths closed. Audio: ambient wind, natural breath, and environmental SFX.
+AUDIO — Language: ${langSpec.langName} (${langSpec.accent} accent). Only the scripted lines above; lip-sync strictly matched to the speaking character (${speakerLabel}), everyone else keeps mouths closed. Voices: ${activeChars.map(c => `${c.name} — ${c.voiceProfile}`).join('; ')}; Narrator — warm, dramatic ${langSpec.accent} storyteller voice. Natural room tone and realistic SFX. No music. No overlapping voices.
+EXCLUDE — subtitles, captions, text overlays, logos, watermarks, face merging, identity swaps, wardrobe transfer, extra people, simultaneous lip movement, distorted hands, floating props, jitter, reset poses between cuts.
+SAFETY — Original fictional adult characters only. No real people, no celebrity likeness, no logos, no graphic violence.`;
+
+        return {
+          sceneId,
+          usedAssetIds: activeAssets.map(a => a.id),
+          narrationAndDialogue,
+          caption,
+          imagePrompt,
+          videoPrompt
+        };
+      });
+
+      return { assets, scenes };
+    }
+
     function getLanguageSpec(selectedLang, fullText) {
       const map = {
-        'Indonesia': { langName: 'Indonesian', accent: 'Indonesian', country: 'Indonesia' },
-        'United States': { langName: 'American English', accent: 'American', country: 'United States' },
-        'United Kingdom': { langName: 'British English', accent: 'British', country: 'United Kingdom' },
-        'Philippines': { langName: 'Filipino / Tagalog', accent: 'Filipino', country: 'Philippines' },
-        'Japan': { langName: 'Japanese', accent: 'Japanese', country: 'Japan' },
-        'South Korea': { langName: 'Korean', accent: 'Korean', country: 'South Korea' },
-        'Thailand': { langName: 'Thai', accent: 'Thai', country: 'Thailand' },
-        'Vietnam': { langName: 'Vietnamese', accent: 'Vietnamese', country: 'Vietnam' },
-        'India': { langName: 'Hindi / Indian English', accent: 'Indian', country: 'India' },
-        'China': { langName: 'Mandarin Chinese', accent: 'Chinese', country: 'China' },
-        'Mexico': { langName: 'Mexican Spanish', accent: 'Mexican', country: 'Mexico' },
-        'Spain': { langName: 'Spanish', accent: 'Spanish', country: 'Spain' },
-        'Brazil': { langName: 'Brazilian Portuguese', accent: 'Brazilian', country: 'Brazil' },
-        'France': { langName: 'French', accent: 'French', country: 'France' },
-        'Germany': { langName: 'German', accent: 'German', country: 'Germany' },
-        'Egypt': { langName: 'Egyptian Arabic', accent: 'Egyptian', country: 'Egypt' },
-        'Nigeria': { langName: 'Nigerian English', accent: 'Nigerian', country: 'Nigeria' },
-        'Bangladesh': { langName: 'Bengali', accent: 'Bangladeshi', country: 'Bangladesh' }
+        'Indonesia': { langName: 'Indonesian', accent: 'Indonesian' },
+        'United States': { langName: 'English', accent: 'American English' },
+        'United Kingdom': { langName: 'English', accent: 'British English' },
+        'Philippines': { langName: 'Tagalog / Filipino', accent: 'Filipino' },
+        'Japan': { langName: 'Japanese', accent: 'Japanese' },
+        'South Korea': { langName: 'Korean', accent: 'Korean' },
+        'Thailand': { langName: 'Thai', accent: 'Thai' },
+        'Vietnam': { langName: 'Vietnamese', accent: 'Vietnamese' },
+        'India': { langName: 'Hindi', accent: 'Indian' },
+        'China': { langName: 'Mandarin Chinese', accent: 'Chinese' },
+        'Mexico': { langName: 'Spanish', accent: 'Mexican Spanish' },
+        'Spain': { langName: 'Spanish', accent: 'Castilian Spanish' },
+        'Brazil': { langName: 'Portuguese', accent: 'Brazilian Portuguese' },
+        'France': { langName: 'French', accent: 'French' },
+        'Germany': { langName: 'German', accent: 'German' },
+        'Egypt': { langName: 'Arabic', accent: 'Egyptian Arabic' },
+        'Nigeria': { langName: 'English', accent: 'Nigerian English' },
+        'Bangladesh': { langName: 'Bengali', accent: 'Bengali' }
       };
 
       if (selectedLang !== 'auto' && map[selectedLang]) {
         return map[selectedLang];
       }
 
-      const lower = fullText.toLowerCase();
-      const idWords = ['yang', 'dan', 'di', 'ke', 'dari', 'ini', 'itu', 'dengan', 'tidak', 'ada', 'sudah', 'saya', 'aku', 'dia'];
-      const idHits = idWords.filter(w => new RegExp(`\\b${w}\\b`).test(lower)).length;
-      if (idHits >= 2) {
-        return { langName: 'Indonesian', accent: 'Indonesian', country: 'Indonesia' };
-      }
-      return { langName: 'English (matching story script language)', accent: 'natural native', country: 'Auto-matched' };
+      // Auto-detect based on common Indonesian vs English words
+      const isIndo = /\b(dan|yang|di|ke|dari|ini|itu|dengan|untuk|tidak|ada|menjelang|subuh|sumur|pintu|berteriak|berkata)\b/i.test(fullText);
+      return isIndo
+        ? { langName: 'Indonesian', accent: 'Indonesian' }
+        : { langName: 'English', accent: 'Neutral English' };
     }
 
     function getStylePrefix(genre) {
-      switch (genre) {
-        case 'anime-2d':
-          return 'dark hand-drawn 2D anime illustration (clean ink line art, flat cel shading, anime eyes and facial features, painted anime background; not a photograph, not photorealistic, not 3D)';
-        case 'stickman':
-          return '2D minimalist stickman / stick figure doodle animation (clean bold black ink outlines, expressive simple round stickman head and dynamic stick limbs, minimal flat textured paper background, engaging YouTube storytelling animation style; not photorealistic, not 3D)';
-        case 'folklore-horror':
-          return 'dark moody Indonesian folklore horror cinema (35mm film grain, dramatic tungsten shadows, atmospheric mist, realistic period textures)';
-        case '3d-pixar':
-          return 'stylized 3D animated feature film aesthetic (Pixar and DreamWorks inspired, soft subsurface scattering, expressive stylized facial proportions, rich global illumination, cinematic depth of field)';
-        case 'claymation':
-          return 'handcrafted stop-motion claymation animation (tactile sculpted polymer clay textures, visible subtle thumbprints, miniature handcrafted diorama set, warm studio spotlighting)';
-        case 'comic-novel':
-          return 'bold graphic novel and comic book illustration (heavy black ink crosshatching, halftone dot shading, dramatic cel-colored panels, dynamic high-contrast lighting)';
-        case 'retro-anime':
-          return 'vintage 1990s retro cel-shaded anime aesthetic (soft analog film grain, hand-painted gouache backgrounds, classic 90s character proportions, warm VHS color grading)';
-        case 'watercolor':
-          return 'hand-painted watercolor storybook illustration (delicate ink pen contours, soft bleeding watercolor washes on cold-press textured paper, warm nostalgic atmosphere)';
-        case 'paper-cutout':
-          return 'multi-layered 2.5D paper cutout shadowbox art (textured craft paper layers, subtle drop shadows between depth planes, warm backlit theatrical lighting)';
-        case 'cyberpunk-noir':
-          return 'cyberpunk neon noir anime cinema (rain-slicked reflections, volumetric cyan and magenta haze, sharp high-contrast line art)';
-        case 'low-poly':
-          return 'stylized low-poly 3D geometric art (faceted angular surfaces, vibrant flat-shaded color gradients, clean minimalist ambient occlusion lighting)';
-        default:
-          return 'realistic dramatic cinema (35mm lens, natural tungsten key lighting, shallow depth of field, rich atmospheric texture)';
-      }
+      const styles = {
+        'anime-2d': 'dark hand-drawn 2D anime illustration (clean ink line art, flat cel shading, anime eyes and facial features, painted anime background; not a photograph, not photorealistic, not 3D)',
+        'stickman': 'clean 2D stickman animation style (expressive black ink stick figures on textured off-white paper background, minimal bold strokes, dynamic comedic/dramatic poses, 2D vector doodle art)',
+        'folklore-horror': 'dark moody Indonesian folklore horror cinema (35mm film grain, dramatic chiaroscuro tungsten lighting, atmospheric mist, realistic period textures)',
+        '3d-pixar': 'high-end 3D animated feature film style (Pixar and Disney inspired stylized 3D characters, expressive large eyes, soft subsurface scattering skin, rich volumetric lighting, 8k render)',
+        'claymation': 'handcrafted claymation stop-motion animation style (tactile sculpted clay textures, subtle fingerprint details, miniature physical set lighting, Aardman inspired)',
+        'comic-novel': 'gritty graphic novel comic book illustration (bold black ink crosshatching, dramatic halftone shadows, vivid cinematic color grading)',
+        'retro-anime': 'vintage 1990s retro cel-shaded anime aesthetic (soft VHS film grain, classic hand-painted cel backgrounds, nostalgic color palette)',
+        'watercolor': 'hand-painted watercolor storybook illustration (delicate ink outlines, soft bleeding watercolor washes on cold-press paper texture, poetic lighting)',
+        'paper-cutout': 'layered 3D paper cutout diorama art (intricate multi-plane paper craft shadows, warm backlight glow, tactile paper grain)',
+        'cyberpunk-noir': 'neon-drenched cyberpunk sci-fi noir (rain-slicked streets, cyan and magenta holographic reflections, atmospheric fog, cinematic anamorphic lens)',
+        'cinematic-drama': 'realistic cinematic live-action film drama (35mm anamorphic lens, natural skin textures, shallow depth of field, moody filmic color grade)',
+        'low-poly': 'stylized low-poly 3D geometric art (faceted flat-shaded surfaces, vibrant atmospheric lighting, clean modern indie game aesthetic)'
+      };
+      return styles[genre] || styles['anime-2d'];
     }
 
-    function renderReferenceAssetsFromAI(aiAssets, stylePrefix, ratio) {
-      assetsWrapper.classList.remove('hidden');
+    function renderReferenceAssetsFromAI(assetsList, stylePrefix, ratio) {
       const container = document.getElementById('assetPromptsContainer');
+      const assetBadge = document.getElementById('assetBadge');
       container.innerHTML = '';
-      const normalizedAssets = [];
 
-      aiAssets.forEach((item, idx) => {
-        const assetId = `asset_${String(idx + 1).padStart(3, '0')}`;
-        const cleanType = ['Character', 'Location', 'Prop'].includes(item.type) ? item.type : 'Prop';
-        let prompt = '';
+      assetsList.forEach((asset, idx) => {
+        const assetId = asset.id || `asset_${String(idx + 1).padStart(3, '0')}`;
+        asset.id = assetId;
 
-        if (cleanType === 'Character') {
-          prompt = `${stylePrefix}, ${ratio} vertical character reference card of ${item.name}, ${item.visualDescription}. Two views in one clean reference card: left a clear portrait close-up of the face, right a full-body standing pose. Same character, same outfit, same hairstyle, same proportions in both views. Plain neutral light-gray background, soft even studio light. No text, no labels, no logo, no watermark. A reusable character reference card, not an action scene.`;
-        } else if (cleanType === 'Location') {
-          prompt = `${stylePrefix}, ${ratio} vertical location reference — one single portrait hero angle showing ${item.visualDescription}. No characters, no text, no logo, no watermark.`;
+        let fullImagePrompt = '';
+        let typeBadgeClass = 'bg-purple-950 text-purple-300 border-purple-800/70';
+
+        if (asset.type === 'Character') {
+          typeBadgeClass = 'bg-purple-950 text-purple-300 border-purple-800/70';
+          fullImagePrompt = `${stylePrefix}, ${ratio} vertical character reference card of ${asset.name}, ${asset.visualDescription}. Two views in one clean reference card: left a clear portrait close-up of the face, right a full-body standing pose. Same character, same outfit, same hairstyle, same proportions in both views. Plain neutral light-gray background, soft even studio light. No text, no labels, no logo, no watermark. A reusable character reference card, not an action scene.`;
+        } else if (asset.type === 'Location') {
+          typeBadgeClass = 'bg-sky-950 text-sky-300 border-sky-800/70';
+          fullImagePrompt = `${stylePrefix}, ${ratio} vertical location reference — one single hero angle of ${asset.name}, showing ${asset.visualDescription}. No characters, no people, no text, no logo, no watermark.`;
         } else {
-          prompt = `${stylePrefix}, ${ratio} vertical prop reference card — ${item.visualDescription}, centered on plain neutral light-gray background, studio prop reference. No characters, no text, no logo, no watermark.`;
+          typeBadgeClass = 'bg-amber-950 text-amber-300 border-amber-800/70';
+          fullImagePrompt = `${stylePrefix}, ${ratio} isolated object prop reference card of ${asset.name}, ${asset.visualDescription}. Centered hero product view on plain neutral light-gray studio background, crisp detail, soft even lighting. No hands, no characters, no text, no watermark.`;
         }
 
-        const assetObj = {
-          id: assetId,
-          originalId: item.id,
-          type: cleanType,
-          name: item.name,
-          prompt
-        };
-        normalizedAssets.push(assetObj);
-
-        const previewId = `preview_${assetId}`;
-        const fileId = `file_${assetId}`;
-        const textId = `text_${assetId}`;
-        const badgeColor = cleanType === 'Character'
-          ? 'bg-purple-950 text-purple-300 border-purple-700/60'
-          : cleanType === 'Location'
-            ? 'bg-sky-950 text-sky-300 border-sky-700/60'
-            : 'bg-amber-950 text-amber-300 border-amber-700/60';
-
         const card = document.createElement('div');
-        card.className = 'bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl grid grid-cols-1 md:grid-cols-12 gap-4 items-start';
+        card.className = 'bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg';
         card.innerHTML = `
-          <div class="md:col-span-4 space-y-2">
-            <div class="flex items-center justify-between gap-1">
-              <span class="text-xs font-bold font-mono text-purple-400">${assetId}</span>
-              <span class="text-[10px] px-2 py-0.5 rounded border ${badgeColor} font-medium truncate">${cleanType}: ${item.name}</span>
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-slate-800/80">
+            <div class="flex items-center gap-2">
+              <span class="font-mono text-xs font-bold text-purple-400">${assetId}</span>
+              <span class="text-[10px] px-2 py-0.5 rounded border ${typeBadgeClass} font-semibold uppercase">${asset.type}</span>
+              <span class="text-xs font-semibold text-white">${asset.name}</span>
             </div>
-            <div id="${previewId}" class="w-full aspect-[9/14] bg-slate-950 border border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-500 overflow-hidden">
-              <i class="fa-regular fa-image text-2xl mb-1.5 opacity-50"></i>
-              <span class="text-[10px] text-center px-2">Upload ${item.name}</span>
-            </div>
-            <label class="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-700 rounded-lg text-[11px] text-slate-300 cursor-pointer transition">
-              <i class="fa-solid fa-upload text-[10px]"></i> Pilih File Gambar
-              <input type="file" id="${fileId}" accept="image/*" class="hidden" onchange="handleImageUpload(event, '${previewId}')">
-            </label>
+            <button onclick="copyFieldText('${assetId}_prompt')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium border border-slate-700 transition flex items-center gap-1.5">
+              <i class="fa-regular fa-copy"></i> Copy Image Prompt
+            </button>
           </div>
-          <div class="md:col-span-8 space-y-2">
-            <div class="flex justify-between items-center">
-              <span class="text-[11px] font-semibold text-slate-300">Image prompt — <span class="text-purple-300">${item.name}</span></span>
-              <button onclick="copyToClipboard('${textId}')" class="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-[11px] font-medium transition flex items-center gap-1">
-                <i class="fa-regular fa-copy"></i> Copy Prompt
-              </button>
+
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+            <div class="md:col-span-4 space-y-2">
+              <div id="${assetId}_preview_box" class="aspect-[9/14] w-full rounded-xl bg-slate-950 border border-dashed border-slate-800 flex flex-col items-center justify-center overflow-hidden relative group">
+                <i class="fa-regular fa-image text-2xl text-slate-600 mb-1.5"></i>
+                <span class="text-[10px] text-slate-500 text-center px-2">Preview ${assetId}<br>(${asset.name})</span>
+                <img id="${assetId}_img" class="hidden w-full h-full object-cover" alt="${asset.name}" />
+              </div>
+              <label class="w-full py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium border border-slate-700 cursor-pointer flex items-center justify-center gap-1.5 transition">
+                <i class="fa-solid fa-upload"></i> Pilih File Gambar
+                <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event, '${assetId}_img', '${assetId}_preview_box')" />
+              </label>
             </div>
-            <textarea id="${textId}" rows="9" class="w-full rounded-xl p-3 text-xs text-slate-200 font-sans leading-relaxed focus:outline-none resize-y">${prompt}</textarea>
+
+            <div class="md:col-span-8 space-y-2">
+              <label class="text-[11px] font-medium text-slate-400 block">Image prompt (${asset.type}: ${asset.name})</label>
+              <textarea id="${assetId}_prompt" rows="8" class="w-full rounded-xl p-3 font-mono text-[11px] text-slate-200 leading-relaxed resize-y">${fullImagePrompt}</textarea>
+            </div>
           </div>
         `;
         container.appendChild(card);
       });
 
-      document.getElementById('assetBadge').textContent = `${normalizedAssets.length} Reference Assets`;
-      return normalizedAssets;
+      assetsWrapper.classList.remove('hidden');
+      assetBadge.textContent = `${assetsList.length} Reference Assets`;
+      return assetsList;
     }
 
-    function renderScenesFromAI(aiScenes, allAssets, stylePrefix, ratio, langSpec) {
-      scenesWrapper.classList.remove('hidden');
+    function renderScenesFromAI(scenesList, allAssets, stylePrefix, ratio, langSpec) {
+      const sceneBadge = document.getElementById('sceneBadge');
       scenesContainer.innerHTML = '';
-      const totalScenes = aiScenes.length;
 
-      aiScenes.forEach((scene, idx) => {
+      scenesList.forEach((scene, idx) => {
         const sceneNum = idx + 1;
-        const sceneId = `scene_${String(sceneNum).padStart(3, '0')}`;
+        const sceneId = scene.sceneId || `scene_${String(sceneNum).padStart(3, '0')}`;
+        const usedIds = Array.isArray(scene.usedAssetIds) && scene.usedAssetIds.length > 0
+          ? scene.usedAssetIds
+          : allAssets.slice(0, 2).map(a => a.id);
 
-        // Match assets by ID or fallback to all assets if empty
-        let matchedAssets = allAssets.filter(a =>
-          (scene.usedAssetIds || []).some(uid =>
-            uid.toLowerCase() === a.id.toLowerCase() ||
-            uid.toLowerCase() === (a.originalId || '').toLowerCase() ||
-            uid.toLowerCase().includes(a.name.toLowerCase())
-          )
-        );
-        if (matchedAssets.length === 0) {
-          matchedAssets = allAssets;
-        }
-
-        const assetBadgesHtml = matchedAssets.map(a => {
-          const pillStyle = a.type === 'Character'
-            ? 'bg-purple-950/80 text-purple-300 border-purple-700/60'
-            : a.type === 'Location'
-              ? 'bg-sky-950/80 text-sky-300 border-sky-700/60'
-              : 'bg-amber-950/80 text-amber-300 border-amber-700/60';
-          return `<span class="text-[10px] font-mono px-2 py-0.5 rounded border ${pillStyle}">${a.id} (${a.name})</span>`;
+        const assetBadgesHtml = usedIds.map(id => {
+          const found = allAssets.find(a => a.id === id);
+          const label = found ? `${id} (${found.name})` : id;
+          return `<span class="text-[10px] font-mono bg-purple-950/80 text-purple-300 border border-purple-700/60 px-2 py-0.5 rounded-md">${label}</span>`;
         }).join('');
 
         const card = document.createElement('div');
-        card.className = 'bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl grid grid-cols-1 md:grid-cols-12 gap-4 items-start';
-        const previewId = `preview_${sceneId}`;
-        const fileId = `file_${sceneId}`;
-        const dialogueAreaId = `dialogue_${sceneId}`;
-        const captionAreaId = `caption_${sceneId}`;
-        const imgAreaId = `img_${sceneId}`;
-        const vidAreaId = `vid_${sceneId}`;
-
+        card.className = 'bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4';
         card.innerHTML = `
-          <!-- Left Column: Scene Start Frame Preview & Upload -->
-          <div class="md:col-span-4 space-y-2">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold font-mono text-emerald-400">${sceneId}</span>
-              <span class="text-[10px] text-slate-400">Part ${sceneNum}/${totalScenes}</span>
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800">
+            <div class="flex items-center gap-2.5">
+              <span class="font-mono text-xs font-bold text-emerald-400">${sceneId}</span>
+              <span class="text-[11px] text-slate-400">Part ${sceneNum} of ${scenesList.length}</span>
             </div>
-            <div id="${previewId}" class="w-full aspect-[9/14] bg-slate-950 border border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-500 overflow-hidden relative">
-              <i class="fa-solid fa-film text-2xl mb-1.5 opacity-50"></i>
-              <span class="text-[10px] text-center px-2">Upload Start Frame ${sceneId}</span>
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="text-[10px] text-slate-400 mr-1">Assets Used:</span>
+              ${assetBadgesHtml}
             </div>
-            <label class="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-700 rounded-lg text-[11px] text-slate-300 cursor-pointer transition">
-              <i class="fa-solid fa-upload text-[10px]"></i> Pilih File Start Frame
-              <input type="file" id="${fileId}" accept="image/*" class="hidden" onchange="handleImageUpload(event, '${previewId}')">
-            </label>
-            <button onclick="copyToClipboard('${vidAreaId}')" class="w-full py-2 px-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-semibold transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20">
-              <i class="fa-regular fa-copy"></i> Copy Video Prompt
-            </button>
           </div>
 
-          <!-- Right Column: Assets Used + 4 Structured Fields -->
-          <div class="md:col-span-8 space-y-3">
-            <!-- Assets Used Box -->
-            <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-2.5 space-y-1.5">
-              <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">Assets Digunakan Pada ${sceneId}:</span>
-              <div class="flex flex-wrap gap-1.5">
-                ${assetBadgesHtml}
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+            <!-- Left Start Frame Preview -->
+            <div class="md:col-span-4 space-y-2">
+              <div id="${sceneId}_preview_box" class="aspect-[9/16] w-full rounded-xl bg-slate-950 border border-dashed border-slate-800 flex flex-col items-center justify-center overflow-hidden relative">
+                <i class="fa-solid fa-film text-2xl text-slate-600 mb-1.5"></i>
+                <span class="text-[10px] text-slate-500 text-center px-3">Start Frame ${sceneId}</span>
+                <img id="${sceneId}_img" class="hidden w-full h-full object-cover" alt="${sceneId}" />
               </div>
+              <label class="w-full py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium border border-slate-700 cursor-pointer flex items-center justify-center gap-1.5 transition">
+                <i class="fa-solid fa-upload"></i> Pilih File Start Frame
+                <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event, '${sceneId}_img', '${sceneId}_preview_box')" />
+              </label>
+              <button onclick="copyFieldText('${sceneId}_video')" class="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-1.5">
+                <i class="fa-regular fa-copy"></i> Copy Video Prompt
+              </button>
             </div>
 
-            <!-- 1. Narration / dialogue -->
-            <div class="space-y-1">
-              <div class="flex justify-between items-center">
-                <span class="text-[11px] font-semibold text-sky-300">Narration / dialogue</span>
-                <button onclick="copyToClipboard('${dialogueAreaId}')" class="text-[10px] text-slate-400 hover:text-white"><i class="fa-regular fa-copy"></i> Copy</button>
+            <!-- Right Prompts & Narration -->
+            <div class="md:col-span-8 space-y-3.5">
+              <div>
+                <div class="flex justify-between items-center mb-1">
+                  <label class="text-[11px] font-semibold text-sky-400">Narration / dialogue (${langSpec.langName})</label>
+                  <button onclick="copyFieldText('${sceneId}_narration')" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
+                    <i class="fa-regular fa-copy"></i> Copy
+                  </button>
+                </div>
+                <textarea id="${sceneId}_narration" rows="2" class="w-full rounded-xl p-2.5 text-xs text-slate-100 leading-relaxed resize-y">${scene.narrationAndDialogue}</textarea>
               </div>
-              <textarea id="${dialogueAreaId}" rows="3" class="w-full rounded-xl p-2.5 text-xs text-sky-200 font-sans focus:outline-none resize-y">${scene.narrationAndDialogue}</textarea>
-            </div>
 
-            <!-- 2. Caption -->
-            <div class="space-y-1">
-              <div class="flex justify-between items-center">
-                <span class="text-[11px] font-semibold text-slate-300">Caption</span>
-                <button onclick="copyToClipboard('${captionAreaId}')" class="text-[10px] text-slate-400 hover:text-white"><i class="fa-regular fa-copy"></i> Copy</button>
+              <div>
+                <div class="flex justify-between items-center mb-1">
+                  <label class="text-[11px] font-semibold text-slate-300">Caption</label>
+                  <button onclick="copyFieldText('${sceneId}_caption')" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
+                    <i class="fa-regular fa-copy"></i> Copy
+                  </button>
+                </div>
+                <textarea id="${sceneId}_caption" rows="2" class="w-full rounded-xl p-2.5 text-xs text-slate-300 leading-relaxed resize-y">${scene.caption}</textarea>
               </div>
-              <textarea id="${captionAreaId}" rows="2" class="w-full rounded-xl p-2.5 text-xs text-slate-200 font-sans focus:outline-none resize-y">${scene.caption}</textarea>
-            </div>
 
-            <!-- 3. Image prompt -->
-            <div class="space-y-1">
-              <div class="flex justify-between items-center">
-                <span class="text-[11px] font-semibold text-amber-300">Image prompt</span>
-                <button onclick="copyToClipboard('${imgAreaId}')" class="text-[10px] text-slate-400 hover:text-white"><i class="fa-regular fa-copy"></i> Copy</button>
+              <div>
+                <div class="flex justify-between items-center mb-1">
+                  <label class="text-[11px] font-semibold text-amber-400">Image prompt (Nano Banana Start Frame)</label>
+                  <button onclick="copyFieldText('${sceneId}_image')" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
+                    <i class="fa-regular fa-copy"></i> Copy
+                  </button>
+                </div>
+                <textarea id="${sceneId}_image" rows="4" class="w-full rounded-xl p-2.5 font-mono text-[11px] text-amber-100 leading-relaxed resize-y">${scene.imagePrompt}</textarea>
               </div>
-              <textarea id="${imgAreaId}" rows="4" class="w-full rounded-xl p-2.5 text-[11px] text-amber-200 font-sans leading-relaxed focus:outline-none resize-y">${scene.imagePrompt}</textarea>
-            </div>
 
-            <!-- 4. Video prompt -->
-            <div class="space-y-1">
-              <div class="flex justify-between items-center">
-                <span class="text-[11px] font-semibold text-emerald-300">Video prompt</span>
-                <button onclick="copyToClipboard('${vidAreaId}')" class="text-[10px] text-slate-400 hover:text-white"><i class="fa-regular fa-copy"></i> Copy</button>
+              <div>
+                <div class="flex justify-between items-center mb-1">
+                  <label class="text-[11px] font-semibold text-emerald-400">Video prompt (Google Flow / Veo Native Audio)</label>
+                  <button onclick="copyFieldText('${sceneId}_video')" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
+                    <i class="fa-regular fa-copy"></i> Copy
+                  </button>
+                </div>
+                <textarea id="${sceneId}_video" rows="8" class="w-full rounded-xl p-2.5 font-mono text-[11px] text-emerald-200 leading-relaxed resize-y">${scene.videoPrompt}</textarea>
               </div>
-              <textarea id="${vidAreaId}" rows="8" class="w-full rounded-xl p-2.5 text-[11px] text-emerald-300 font-mono leading-relaxed focus:outline-none resize-y">${scene.videoPrompt}</textarea>
             </div>
           </div>
         `;
         scenesContainer.appendChild(card);
       });
 
-      document.getElementById('sceneBadge').textContent = `${totalScenes} Scenes Generated`;
+      scenesWrapper.classList.remove('hidden');
+      sceneBadge.textContent = `${scenesList.length} Scenes`;
     }
 
-    function handleImageUpload(event, previewBoxId) {
+    function handleImageUpload(event, imgId, boxId) {
       const file = event.target.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = function(e) {
-        const box = document.getElementById(previewBoxId);
-        if (box) {
-          box.innerHTML = `<img src="${e.target.result}" alt="Preview" class="w-full h-full object-cover">`;
+        const imgEl = document.getElementById(imgId);
+        const boxEl = document.getElementById(boxId);
+        if (imgEl && boxEl) {
+          imgEl.src = e.target.result;
+          imgEl.classList.remove('hidden');
+          Array.from(boxEl.children).forEach(child => {
+            if (child.tagName !== 'IMG') child.classList.add('hidden');
+          });
         }
       };
       reader.readAsDataURL(file);
     }
 
-    function copyToClipboard(elementId) {
+    function copyFieldText(elementId) {
       const el = document.getElementById(elementId);
       if (!el) return;
-      const text = el.value || el.innerText;
-      const tempInput = document.createElement('textarea');
-      tempInput.value = text;
-      document.body.appendChild(tempInput);
-      tempInput.select();
-      try {
-        document.execCommand('copy');
-        showToast('Prompt berhasil disalin ke clipboard!');
-      } catch (err) {
-        showToast('Gagal menyalin text.');
-      } finally {
-        document.body.removeChild(tempInput);
-      }
+      el.select();
+      document.execCommand('copy');
+      showToast('Prompt berhasil disalin ke clipboard!');
     }
 
-    function showToast(msg) {
+    function showToast(message) {
+      const existing = document.getElementById('toast-notif');
+      if (existing) existing.remove();
+
       const toast = document.createElement('div');
-      toast.className = 'fixed bottom-5 right-5 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-semibold z-50 transition-opacity duration-300';
-      toast.textContent = msg;
+      toast.id = 'toast-notif';
+      toast.className = 'fixed bottom-5 right-5 z-50 bg-emerald-600 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-2xl border border-emerald-400/30 transition-opacity duration-300';
+      toast.textContent = message;
       document.body.appendChild(toast);
+
       setTimeout(() => {
         toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 300);
-      }, 2200);
+      }, 2400);
     }
   </script>
 </body>
