@@ -1,0 +1,649 @@
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google Flow All-in-One Story & Video Prompt Generator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+    body { 
+      font-family: 'Inter', sans-serif; 
+      background-color: #0b0b12 !important; 
+      color: #f8fafc !important;
+    }
+    .font-mono { font-family: 'Fira+Code', monospace; }
+    
+    /* Dark theme matching 0xFlow AI Story interface */
+    select, option, textarea, input {
+      background-color: #13131f !important;
+      color: #f1f5f9 !important;
+      border-color: #26263a !important;
+    }
+    textarea:focus, select:focus {
+      border-color: #8b5cf6 !important;
+      outline: none !important;
+    }
+    .bg-slate-950 { background-color: #0b0b12 !important; }
+    .bg-slate-900\/60, .bg-slate-900 { background-color: #13131f !important; }
+    .border-slate-800 { border-color: #26263a !important; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3.5 flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-purple-500/20">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-white tracking-tight">AI Story & Flow Asset Generator</h1>
+          <p class="text-[11px] text-slate-400">Reference Assets (`asset_001+`) & Continuous Scenes (`scene_001+`) with Synchronized Audio</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] bg-purple-950/70 text-purple-300 border border-purple-800/70 px-2.5 py-1 rounded-lg font-mono">Format: 0xFlow / Veo Native Audio</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+    
+    <!-- Left Input Panel -->
+    <section class="lg:col-span-4 space-y-5">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+        <div class="flex justify-between items-center mb-3">
+          <h2 class="text-sm font-semibold flex items-center gap-2 text-purple-400">
+            <i class="fa-solid fa-feather-pointed"></i> Naskah Cerita
+          </h2>
+          <button id="btn-sample-story" class="text-xs text-purple-400 hover:text-purple-300 underline font-medium flex items-center gap-1">
+            <i class="fa-solid fa-lightbulb"></i> Isi Contoh Cerita
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5 mb-3">
+          <div>
+            <label for="aspect-ratio" class="text-[11px] text-slate-400 block mb-1">Rasio Layar:</label>
+            <select id="aspect-ratio" class="w-full text-xs rounded-xl px-2.5 py-2 focus:outline-none">
+              <option value="vertical 9:16" selected>9:16 Vertical</option>
+              <option value="horizontal 16:9">16:9 Horizontal</option>
+            </select>
+          </div>
+          <div>
+            <label for="genre-select" class="text-[11px] text-slate-400 block mb-1">Visual Style:</label>
+            <select id="genre-select" class="w-full text-xs rounded-xl px-2.5 py-2 focus:outline-none">
+              <option value="anime-2d" selected>Dark 2D Anime Illustration</option>
+              <option value="stickman">Stickman / Stick Figure (2D Doodle)</option>
+              <option value="folklore-horror">Indonesian Folklore Horror (35mm)</option>
+              <option value="3d-pixar">3D Pixar / Animated Movie Style</option>
+              <option value="claymation">Claymation / Stop-Motion Clay</option>
+              <option value="comic-novel">Comic Book / Graphic Novel</option>
+              <option value="retro-anime">Retro 90s Cel Anime</option>
+              <option value="watercolor">Watercolor Storybook Illustration</option>
+              <option value="paper-cutout">Layered Paper Cutout Art</option>
+              <option value="cyberpunk-noir">Cyberpunk Sci-Fi Noir</option>
+              <option value="cinematic-drama">Realistic Cinematic Drama</option>
+              <option value="low-poly">Stylized Low-Poly 3D</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
+          <div>
+            <label for="language-select" class="text-[11px] text-slate-400 block mb-1 font-medium">Bahasa & Aksen Voice-Over:</label>
+            <select id="language-select" class="w-full text-xs rounded-xl px-2.5 py-2 text-sky-300 font-medium focus:outline-none">
+              <option value="auto" selected>Auto (match the language)</option>
+              <option value="Indonesia">Indonesia (Indonesian)</option>
+              <option value="United States">United States (American English)</option>
+              <option value="United Kingdom">United Kingdom (British English)</option>
+              <option value="Philippines">Philippines (Tagalog / Filipino)</option>
+              <option value="Japan">Japan (Japanese)</option>
+              <option value="South Korea">South Korea (Korean)</option>
+              <option value="Thailand">Thailand (Thai)</option>
+              <option value="Vietnam">Vietnam (Vietnamese)</option>
+              <option value="India">India (Hindi / Indian English)</option>
+              <option value="China">China (Mandarin Chinese)</option>
+              <option value="Mexico">Mexico (Mexican Spanish)</option>
+              <option value="Spain">Spain (Castilian Spanish)</option>
+              <option value="Brazil">Brazil (Brazilian Portuguese)</option>
+              <option value="France">France (French)</option>
+              <option value="Germany">Germany (German)</option>
+              <option value="Egypt">Egypt (Egyptian Arabic)</option>
+              <option value="Nigeria">Nigeria (Nigerian English)</option>
+              <option value="Bangladesh">Bangladesh (Bengali)</option>
+            </select>
+          </div>
+          <div>
+            <label for="scene-count-select" class="text-[11px] text-slate-400 block mb-1 font-medium">Target Jumlah Scene:</label>
+            <select id="scene-count-select" class="w-full text-xs rounded-xl px-2.5 py-2 text-purple-300 font-medium focus:outline-none">
+              <option value="auto" selected>Auto (Sesuai Paragraf)</option>
+              <option value="3">3 Scene</option>
+              <option value="4">4 Scene</option>
+              <option value="5">5 Scene</option>
+              <option value="6">6 Scene</option>
+              <option value="8">8 Scene</option>
+            </select>
+          </div>
+        </div>
+        
+        <textarea id="story-input" rows="13" placeholder="Masukkan naskah cerita lengkap di sini..." class="w-full rounded-xl p-3.5 text-slate-200 text-xs leading-relaxed resize-y transition font-sans"></textarea>
+        
+        <div class="mt-3 flex items-center justify-between text-[11px] text-slate-400">
+          <div class="flex gap-3">
+            <span>Karakter: <strong id="char-count" class="text-slate-200">0</strong></span>
+            <span>Kata: <strong id="word-count" class="text-slate-200">0</strong></span>
+          </div>
+          <span class="text-[10px] text-emerald-400 flex items-center gap-1"><i class="fa-solid fa-sparkles"></i> Powered by Gemini AI</span>
+        </div>
+
+        <button id="btn-generate" class="w-full mt-4 py-2.5 px-5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-purple-600/30 transition transform active:scale-95 flex items-center justify-center gap-2">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Reference Assets & Scenes
+        </button>
+      </div>
+    </section>
+
+    <!-- Right Output Panel (0xFlow AI Story Style) -->
+    <section class="lg:col-span-8 space-y-6">
+      <!-- Empty State -->
+      <div id="empty-state" class="bg-slate-900/50 border border-dashed border-slate-800 rounded-2xl p-14 text-center flex flex-col items-center justify-center gap-4">
+        <div class="w-14 h-14 rounded-full bg-slate-800/80 flex items-center justify-center text-purple-400 text-xl">
+          <i class="fa-solid fa-clapperboard"></i>
+        </div>
+        <div class="max-w-sm">
+          <h3 class="text-sm font-semibold text-slate-200">Belum Ada Reference Assets & Scene</h3>
+          <p class="text-xs text-slate-400 mt-1">Masukkan naskah cerita di panel kiri lalu klik Generate untuk membuat kartu <code class="text-purple-300">asset_001+</code> dan <code class="text-emerald-300">scene_001+</code>.</p>
+        </div>
+      </div>
+
+      <!-- SECTION 1: REFERENCE IMAGES (asset_001, asset_002, asset_003...) -->
+      <div id="assets-wrapper" class="hidden space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">Reference Images</span>
+            <h2 class="text-sm font-semibold text-slate-200">Karakter & Lokasi Cerita</h2>
+          </div>
+          <span id="assetBadge" class="text-[11px] text-slate-400 font-mono">0 Assets</span>
+        </div>
+        <div id="assetPromptsContainer" class="space-y-4"></div>
+      </div>
+
+      <!-- SECTION 2: ALL SCENE IMAGES & VIDEOS (scene_001, scene_002...) -->
+      <div id="scenes-wrapper" class="hidden space-y-4 pt-2">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">All Scene Images</span>
+            <h2 class="text-sm font-semibold text-slate-200">Timeline Adegan Tersambung (10-Second Scenes)</h2>
+          </div>
+          <span id="sceneBadge" class="text-[11px] text-slate-400 font-mono">0 Scenes</span>
+        </div>
+        <div id="scenes-container" class="space-y-5"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- App Script -->
+  <script>
+    const SAMPLE_STORY = `Menjelang subuh, Ratna menimba air di sumur batu tua di sudut ruangan rumah adat yang gelap. Tiba-tiba ia melihat bara api rokok menyala di sudut gelap sumur. Ratna terkejut dan berteriak, "Siapa yang merokok di situ? Keluar sekarang, jangan main-main!"
+
+Dari balik bayangan gelap di tepi sumur batu, tampak siluet pria tanpa kepala duduk membisu sambil memegang sebatang rokok menyala.
+
+Ratna panik dan mundur ketakutan ke arah pintu lengkung sambil memegangi kebayanya, lalu berteriak memanggil suaminya, "Mas Bambang, tolong! Ada orang tanpa kepala di sumur!"
+
+Bambang bergegas masuk membawa lampu minyak ke ruang sumur, memeriksa sudut gelap itu dan berkata tegas, "Ada apa, Ratna? Jangan berteriak subuh begini. Lihat ke sumur itu, ada bayangan tanpa kepala!"
+
+Asap rokok tebal masih mengepul di bibir sumur yang kini kosong. Bambang mengendus bau tembakau segar dan berkata cemas, "Hanya abu rokok, tidak ada siapa-siapa di sini. Baunya anyir, Mas! Dia baru saja bergerak! Ayo keluar ke beranda sekarang juga!"
+
+Ratna dan Bambang berlari ke beranda depan rumah dan mendapati pintu depan sudah terbuka lebar ke arah kabut subuh. Ratna bertanya ketakutan, "Mas, pintu depan sudah terbuka dari tadi?"`;
+
+    // DOM Elements
+    const storyInput = document.getElementById('story-input');
+    const charCount = document.getElementById('char-count');
+    const wordCount = document.getElementById('word-count');
+    const btnGenerate = document.getElementById('btn-generate');
+    const btnSample = document.getElementById('btn-sample-story');
+    const emptyState = document.getElementById('empty-state');
+    const assetsWrapper = document.getElementById('assets-wrapper');
+    const scenesWrapper = document.getElementById('scenes-wrapper');
+    const scenesContainer = document.getElementById('scenes-container');
+    const aspectRatioSelect = document.getElementById('aspect-ratio');
+    const genreSelect = document.getElementById('genre-select');
+    const languageSelect = document.getElementById('language-select');
+    const sceneCountSelect = document.getElementById('scene-count-select');
+
+    storyInput.addEventListener('input', () => {
+      const val = storyInput.value;
+      charCount.textContent = val.length;
+      wordCount.textContent = val.trim() ? val.trim().split(/\s+/).length : 0;
+    });
+
+    btnSample.addEventListener('click', () => {
+      storyInput.value = SAMPLE_STORY;
+      storyInput.dispatchEvent(new Event('input'));
+    });
+
+    btnGenerate.addEventListener('click', async () => {
+      const text = storyInput.value.trim();
+      if (!text) {
+        showToast('Silakan masukkan naskah cerita terlebih dahulu!');
+        return;
+      }
+
+      const genre = genreSelect.value;
+      const ratio = aspectRatioSelect.value;
+      const selectedLang = languageSelect.value;
+      const targetSceneCount = sceneCountSelect.value;
+      const langSpec = getLanguageSpec(selectedLang, text);
+      const stylePrefix = getStylePrefix(genre);
+
+      // UI Loading State
+      const originalBtnHtml = btnGenerate.innerHTML;
+      btnGenerate.disabled = true;
+      btnGenerate.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Gemini AI sedang menganalisis cerita & menyusun prompt...`;
+
+      try {
+        const aiResult = await analyzeStoryWithGemini(text, stylePrefix, ratio, langSpec, targetSceneCount);
+        emptyState.classList.add('hidden');
+
+        const allAssets = renderReferenceAssetsFromAI(aiResult.assets, stylePrefix, ratio);
+        renderScenesFromAI(aiResult.scenes, allAssets, stylePrefix, ratio, langSpec);
+        showToast('Berhasil di-generate menggunakan Gemini AI!');
+      } catch (err) {
+        showToast('Terjadi kendala koneksi AI, silakan coba klik Generate kembali.');
+      } finally {
+        btnGenerate.disabled = false;
+        btnGenerate.innerHTML = originalBtnHtml;
+      }
+    });
+
+    async function analyzeStoryWithGemini(storyText, stylePrefix, ratio, langSpec, targetSceneCount) {
+      const apiKey = "";
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+      const sceneCountInstruction = targetSceneCount === 'auto'
+        ? 'Divide the story naturally into logical sequential scenes (between 3 to 6 scenes).'
+        : `Divide the story into EXACTLY ${targetSceneCount} sequential scenes that flow continuously from beginning to end.`;
+
+      const systemInstruction = `You are an expert AI Film Director, Storyboard Artist, and Google Flow / Veo Prompt Engineer.
+Analyze the user's story carefully and extract clean, natural, sensible assets and sequential 10-second video scenes.
+
+CRITICAL RULES FOR ASSETS:
+1. Extract ONLY real characters, real locations, and key objects/props actually mentioned or implied in the story.
+2. Give each asset a clean, sensible, human-readable name (e.g., "Ratna", "Bambang", "Sosok Tanpa Kepala", "Sumur Batu Tua", "Beranda Rumah Adat", "Lampu Minyak Tua"). NEVER use random adjectives, random verbs, or generic words as names.
+3. Categorize each asset strictly as "Character", "Location", or "Prop".
+4. For "Character" assets: write detailed physical appearance & outfit in English suitable for a two-view reference sheet (portrait close-up + full-body standing pose on plain neutral light-gray background). Also provide voice description in ${langSpec.langName} (${langSpec.accent} accent).
+5. For "Location" assets: write rich environment description in English (foreground, midground, background, lighting, NO characters).
+6. For "Prop" assets: write isolated object description in English on plain neutral light-gray background.
+
+CRITICAL RULES FOR SCENES:
+1. ${sceneCountInstruction}
+2. Every scene must connect seamlessly as one continuous story from scene 1 to the final scene.
+3. For each scene, list the exact asset IDs ("asset_001", "asset_002", etc.) actually present in that scene.
+4. Provide natural narration and character dialogues in ${langSpec.langName} matching the story plot.
+5. Write a cohesive Start Frame image prompt in English referencing the active assets and visual style (${stylePrefix}), aspect ratio ${ratio}.
+6. Write a complete 10-second Google Flow / Veo All-In-One video prompt in English with exact timestamps ([00:00-00:03], [00:03-00:07], [00:07-00:10]), synchronized ${langSpec.langName} voice-over narration & lip-sync dialogues, camera angles, character screen sides (camera LEFT / camera RIGHT), SFX, EXCLUDE rules, and SAFETY rules.`;
+
+      const payload = {
+        contents: [{
+          parts: [{
+            text: `Visual Style: ${stylePrefix}\nAspect Ratio: ${ratio}\nTarget Spoken Language & Accent: ${langSpec.langName} (${langSpec.accent})\n\nStory Text:\n${storyText}`
+          }]
+        }],
+        systemInstruction: {
+          parts: [{ text: systemInstruction }]
+        },
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              assets: {
+                type: "ARRAY",
+                items: {
+                  type: "OBJECT",
+                  properties: {
+                    id: { type: "STRING" },
+                    type: { type: "STRING" },
+                    name: { type: "STRING" },
+                    visualDescription: { type: "STRING" },
+                    voiceProfile: { type: "STRING" }
+                  },
+                  required: ["id", "type", "name", "visualDescription"]
+                }
+              },
+              scenes: {
+                type: "ARRAY",
+                items: {
+                  type: "OBJECT",
+                  properties: {
+                    sceneId: { type: "STRING" },
+                    usedAssetIds: {
+                      type: "ARRAY",
+                      items: { type: "STRING" }
+                    },
+                    narrationAndDialogue: { type: "STRING" },
+                    caption: { type: "STRING" },
+                    imagePrompt: { type: "STRING" },
+                    videoPrompt: { type: "STRING" }
+                  },
+                  required: ["sceneId", "usedAssetIds", "narrationAndDialogue", "caption", "imagePrompt", "videoPrompt"]
+                }
+              }
+            },
+            required: ["assets", "scenes"]
+          }
+        }
+      };
+
+      const delays = [1000, 2000, 4000];
+      for (let attempt = 0; attempt <= delays.length; attempt++) {
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const data = await response.json();
+          const rawJson = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!rawJson) throw new Error('Empty response');
+          return JSON.parse(rawJson);
+        } catch (error) {
+          if (attempt === delays.length) throw error;
+          await new Promise(res => setTimeout(res, delays[attempt]));
+        }
+      }
+    }
+
+    function getLanguageSpec(selectedLang, fullText) {
+      const map = {
+        'Indonesia': { langName: 'Indonesian', accent: 'Indonesian', country: 'Indonesia' },
+        'United States': { langName: 'American English', accent: 'American', country: 'United States' },
+        'United Kingdom': { langName: 'British English', accent: 'British', country: 'United Kingdom' },
+        'Philippines': { langName: 'Filipino / Tagalog', accent: 'Filipino', country: 'Philippines' },
+        'Japan': { langName: 'Japanese', accent: 'Japanese', country: 'Japan' },
+        'South Korea': { langName: 'Korean', accent: 'Korean', country: 'South Korea' },
+        'Thailand': { langName: 'Thai', accent: 'Thai', country: 'Thailand' },
+        'Vietnam': { langName: 'Vietnamese', accent: 'Vietnamese', country: 'Vietnam' },
+        'India': { langName: 'Hindi / Indian English', accent: 'Indian', country: 'India' },
+        'China': { langName: 'Mandarin Chinese', accent: 'Chinese', country: 'China' },
+        'Mexico': { langName: 'Mexican Spanish', accent: 'Mexican', country: 'Mexico' },
+        'Spain': { langName: 'Spanish', accent: 'Spanish', country: 'Spain' },
+        'Brazil': { langName: 'Brazilian Portuguese', accent: 'Brazilian', country: 'Brazil' },
+        'France': { langName: 'French', accent: 'French', country: 'France' },
+        'Germany': { langName: 'German', accent: 'German', country: 'Germany' },
+        'Egypt': { langName: 'Egyptian Arabic', accent: 'Egyptian', country: 'Egypt' },
+        'Nigeria': { langName: 'Nigerian English', accent: 'Nigerian', country: 'Nigeria' },
+        'Bangladesh': { langName: 'Bengali', accent: 'Bangladeshi', country: 'Bangladesh' }
+      };
+
+      if (selectedLang !== 'auto' && map[selectedLang]) {
+        return map[selectedLang];
+      }
+
+      const lower = fullText.toLowerCase();
+      const idWords = ['yang', 'dan', 'di', 'ke', 'dari', 'ini', 'itu', 'dengan', 'tidak', 'ada', 'sudah', 'saya', 'aku', 'dia'];
+      const idHits = idWords.filter(w => new RegExp(`\\b${w}\\b`).test(lower)).length;
+      if (idHits >= 2) {
+        return { langName: 'Indonesian', accent: 'Indonesian', country: 'Indonesia' };
+      }
+      return { langName: 'English (matching story script language)', accent: 'natural native', country: 'Auto-matched' };
+    }
+
+    function getStylePrefix(genre) {
+      switch (genre) {
+        case 'anime-2d':
+          return 'dark hand-drawn 2D anime illustration (clean ink line art, flat cel shading, anime eyes and facial features, painted anime background; not a photograph, not photorealistic, not 3D)';
+        case 'stickman':
+          return '2D minimalist stickman / stick figure doodle animation (clean bold black ink outlines, expressive simple round stickman head and dynamic stick limbs, minimal flat textured paper background, engaging YouTube storytelling animation style; not photorealistic, not 3D)';
+        case 'folklore-horror':
+          return 'dark moody Indonesian folklore horror cinema (35mm film grain, dramatic tungsten shadows, atmospheric mist, realistic period textures)';
+        case '3d-pixar':
+          return 'stylized 3D animated feature film aesthetic (Pixar and DreamWorks inspired, soft subsurface scattering, expressive stylized facial proportions, rich global illumination, cinematic depth of field)';
+        case 'claymation':
+          return 'handcrafted stop-motion claymation animation (tactile sculpted polymer clay textures, visible subtle thumbprints, miniature handcrafted diorama set, warm studio spotlighting)';
+        case 'comic-novel':
+          return 'bold graphic novel and comic book illustration (heavy black ink crosshatching, halftone dot shading, dramatic cel-colored panels, dynamic high-contrast lighting)';
+        case 'retro-anime':
+          return 'vintage 1990s retro cel-shaded anime aesthetic (soft analog film grain, hand-painted gouache backgrounds, classic 90s character proportions, warm VHS color grading)';
+        case 'watercolor':
+          return 'hand-painted watercolor storybook illustration (delicate ink pen contours, soft bleeding watercolor washes on cold-press textured paper, warm nostalgic atmosphere)';
+        case 'paper-cutout':
+          return 'multi-layered 2.5D paper cutout shadowbox art (textured craft paper layers, subtle drop shadows between depth planes, warm backlit theatrical lighting)';
+        case 'cyberpunk-noir':
+          return 'cyberpunk neon noir anime cinema (rain-slicked reflections, volumetric cyan and magenta haze, sharp high-contrast line art)';
+        case 'low-poly':
+          return 'stylized low-poly 3D geometric art (faceted angular surfaces, vibrant flat-shaded color gradients, clean minimalist ambient occlusion lighting)';
+        default:
+          return 'realistic dramatic cinema (35mm lens, natural tungsten key lighting, shallow depth of field, rich atmospheric texture)';
+      }
+    }
+
+    function renderReferenceAssetsFromAI(aiAssets, stylePrefix, ratio) {
+      assetsWrapper.classList.remove('hidden');
+      const container = document.getElementById('assetPromptsContainer');
+      container.innerHTML = '';
+      const normalizedAssets = [];
+
+      aiAssets.forEach((item, idx) => {
+        const assetId = `asset_${String(idx + 1).padStart(3, '0')}`;
+        const cleanType = ['Character', 'Location', 'Prop'].includes(item.type) ? item.type : 'Prop';
+        let prompt = '';
+
+        if (cleanType === 'Character') {
+          prompt = `${stylePrefix}, ${ratio} vertical character reference card of ${item.name}, ${item.visualDescription}. Two views in one clean reference card: left a clear portrait close-up of the face, right a full-body standing pose. Same character, same outfit, same hairstyle, same proportions in both views. Plain neutral light-gray background, soft even studio light. No text, no labels, no logo, no watermark. A reusable character reference card, not an action scene.`;
+        } else if (cleanType === 'Location') {
+          prompt = `${stylePrefix}, ${ratio} vertical location reference — one single portrait hero angle showing ${item.visualDescription}. No characters, no text, no logo, no watermark.`;
+        } else {
+          prompt = `${stylePrefix}, ${ratio} vertical prop reference card — ${item.visualDescription}, centered on plain neutral light-gray background, studio prop reference. No characters, no text, no logo, no watermark.`;
+        }
+
+        const assetObj = {
+          id: assetId,
+          originalId: item.id,
+          type: cleanType,
+          name: item.name,
+          prompt
+        };
+        normalizedAssets.push(assetObj);
+
+        const previewId = `preview_${assetId}`;
+        const fileId = `file_${assetId}`;
+        const textId = `text_${assetId}`;
+        const badgeColor = cleanType === 'Character'
+          ? 'bg-purple-950 text-purple-300 border-purple-700/60'
+          : cleanType === 'Location'
+            ? 'bg-sky-950 text-sky-300 border-sky-700/60'
+            : 'bg-amber-950 text-amber-300 border-amber-700/60';
+
+        const card = document.createElement('div');
+        card.className = 'bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl grid grid-cols-1 md:grid-cols-12 gap-4 items-start';
+        card.innerHTML = `
+          <div class="md:col-span-4 space-y-2">
+            <div class="flex items-center justify-between gap-1">
+              <span class="text-xs font-bold font-mono text-purple-400">${assetId}</span>
+              <span class="text-[10px] px-2 py-0.5 rounded border ${badgeColor} font-medium truncate">${cleanType}: ${item.name}</span>
+            </div>
+            <div id="${previewId}" class="w-full aspect-[9/14] bg-slate-950 border border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-500 overflow-hidden">
+              <i class="fa-regular fa-image text-2xl mb-1.5 opacity-50"></i>
+              <span class="text-[10px] text-center px-2">Upload ${item.name}</span>
+            </div>
+            <label class="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-700 rounded-lg text-[11px] text-slate-300 cursor-pointer transition">
+              <i class="fa-solid fa-upload text-[10px]"></i> Pilih File Gambar
+              <input type="file" id="${fileId}" accept="image/*" class="hidden" onchange="handleImageUpload(event, '${previewId}')">
+            </label>
+          </div>
+          <div class="md:col-span-8 space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-[11px] font-semibold text-slate-300">Image prompt — <span class="text-purple-300">${item.name}</span></span>
+              <button onclick="copyToClipboard('${textId}')" class="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-[11px] font-medium transition flex items-center gap-1">
+                <i class="fa-regular fa-copy"></i> Copy Prompt
+              </button>
+            </div>
+            <textarea id="${textId}" rows="9" class="w-full rounded-xl p-3 text-xs text-slate-200 font-sans leading-relaxed focus:outline-none resize-y">${prompt}</textarea>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      document.getElementById('assetBadge').textContent = `${normalizedAssets.length} Reference Assets`;
+      return normalizedAssets;
+    }
+
+    function renderScenesFromAI(aiScenes, allAssets, stylePrefix, ratio, langSpec) {
+      scenesWrapper.classList.remove('hidden');
+      scenesContainer.innerHTML = '';
+      const totalScenes = aiScenes.length;
+
+      aiScenes.forEach((scene, idx) => {
+        const sceneNum = idx + 1;
+        const sceneId = `scene_${String(sceneNum).padStart(3, '0')}`;
+
+        // Match assets by ID or fallback to all assets if empty
+        let matchedAssets = allAssets.filter(a =>
+          (scene.usedAssetIds || []).some(uid =>
+            uid.toLowerCase() === a.id.toLowerCase() ||
+            uid.toLowerCase() === (a.originalId || '').toLowerCase() ||
+            uid.toLowerCase().includes(a.name.toLowerCase())
+          )
+        );
+        if (matchedAssets.length === 0) {
+          matchedAssets = allAssets;
+        }
+
+        const assetBadgesHtml = matchedAssets.map(a => {
+          const pillStyle = a.type === 'Character'
+            ? 'bg-purple-950/80 text-purple-300 border-purple-700/60'
+            : a.type === 'Location'
+              ? 'bg-sky-950/80 text-sky-300 border-sky-700/60'
+              : 'bg-amber-950/80 text-amber-300 border-amber-700/60';
+          return `<span class="text-[10px] font-mono px-2 py-0.5 rounded border ${pillStyle}">${a.id} (${a.name})</span>`;
+        }).join('');
+
+        const card = document.createElement('div');
+        card.className = 'bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl grid grid-cols-1 md:grid-cols-12 gap-4 items-start';
+        const previewId = `preview_${sceneId}`;
+        const fileId = `file_${sceneId}`;
+        const dialogueAreaId = `dialogue_${sceneId}`;
+        const captionAreaId = `caption_${sceneId}`;
+        const imgAreaId = `img_${sceneId}`;
+        const vidAreaId = `vid_${sceneId}`;
+
+        card.innerHTML = `
+          <!-- Left Column: Scene Start Frame Preview & Upload -->
+          <div class="md:col-span-4 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold font-mono text-emerald-400">${sceneId}</span>
+              <span class="text-[10px] text-slate-400">Part ${sceneNum}/${totalScenes}</span>
+            </div>
+            <div id="${previewId}" class="w-full aspect-[9/14] bg-slate-950 border border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-500 overflow-hidden relative">
+              <i class="fa-solid fa-film text-2xl mb-1.5 opacity-50"></i>
+              <span class="text-[10px] text-center px-2">Upload Start Frame ${sceneId}</span>
+            </div>
+            <label class="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-slate-950 hover:bg-slate-800 border border-slate-700 rounded-lg text-[11px] text-slate-300 cursor-pointer transition">
+              <i class="fa-solid fa-upload text-[10px]"></i> Pilih File Start Frame
+              <input type="file" id="${fileId}" accept="image/*" class="hidden" onchange="handleImageUpload(event, '${previewId}')">
+            </label>
+            <button onclick="copyToClipboard('${vidAreaId}')" class="w-full py-2 px-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-semibold transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20">
+              <i class="fa-regular fa-copy"></i> Copy Video Prompt
+            </button>
+          </div>
+
+          <!-- Right Column: Assets Used + 4 Structured Fields -->
+          <div class="md:col-span-8 space-y-3">
+            <!-- Assets Used Box -->
+            <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-2.5 space-y-1.5">
+              <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">Assets Digunakan Pada ${sceneId}:</span>
+              <div class="flex flex-wrap gap-1.5">
+                ${assetBadgesHtml}
+              </div>
+            </div>
+
+            <!-- 1. Narration / dialogue -->
+            <div class="space-y-1">
+              <div class="flex justify-between items-center">
+                <span class="text-[11px] font-semibold text-sky-300">Narration / dialogue</span>
+                <button onclick="copyToClipboard('${dialogueAreaId}')" class="text-[10px] text-slate-400 hover:text-white"><i class="fa-regular fa-copy"></i> Copy</button>
+              </div>
+              <textarea id="${dialogueAreaId}" rows="3" class="w-full rounded-xl p-2.5 text-xs text-sky-200 font-sans focus:outline-none resize-y">${scene.narrationAndDialogue}</textarea>
+            </div>
+
+            <!-- 2. Caption -->
+            <div class="space-y-1">
+              <div class="flex justify-between items-center">
+                <span class="text-[11px] font-semibold text-slate-300">Caption</span>
+                <button onclick="copyToClipboard('${captionAreaId}')" class="text-[10px] text-slate-400 hover:text-white"><i class="fa-regular fa-copy"></i> Copy</button>
+              </div>
+              <textarea id="${captionAreaId}" rows="2" class="w-full rounded-xl p-2.5 text-xs text-slate-200 font-sans focus:outline-none resize-y">${scene.caption}</textarea>
+            </div>
+
+            <!-- 3. Image prompt -->
+            <div class="space-y-1">
+              <div class="flex justify-between items-center">
+                <span class="text-[11px] font-semibold text-amber-300">Image prompt</span>
+                <button onclick="copyToClipboard('${imgAreaId}')" class="text-[10px] text-slate-400 hover:text-white"><i class="fa-regular fa-copy"></i> Copy</button>
+              </div>
+              <textarea id="${imgAreaId}" rows="4" class="w-full rounded-xl p-2.5 text-[11px] text-amber-200 font-sans leading-relaxed focus:outline-none resize-y">${scene.imagePrompt}</textarea>
+            </div>
+
+            <!-- 4. Video prompt -->
+            <div class="space-y-1">
+              <div class="flex justify-between items-center">
+                <span class="text-[11px] font-semibold text-emerald-300">Video prompt</span>
+                <button onclick="copyToClipboard('${vidAreaId}')" class="text-[10px] text-slate-400 hover:text-white"><i class="fa-regular fa-copy"></i> Copy</button>
+              </div>
+              <textarea id="${vidAreaId}" rows="8" class="w-full rounded-xl p-2.5 text-[11px] text-emerald-300 font-mono leading-relaxed focus:outline-none resize-y">${scene.videoPrompt}</textarea>
+            </div>
+          </div>
+        `;
+        scenesContainer.appendChild(card);
+      });
+
+      document.getElementById('sceneBadge').textContent = `${totalScenes} Scenes Generated`;
+    }
+
+    function handleImageUpload(event, previewBoxId) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const box = document.getElementById(previewBoxId);
+        if (box) {
+          box.innerHTML = `<img src="${e.target.result}" alt="Preview" class="w-full h-full object-cover">`;
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function copyToClipboard(elementId) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      const text = el.value || el.innerText;
+      const tempInput = document.createElement('textarea');
+      tempInput.value = text;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      try {
+        document.execCommand('copy');
+        showToast('Prompt berhasil disalin ke clipboard!');
+      } catch (err) {
+        showToast('Gagal menyalin text.');
+      } finally {
+        document.body.removeChild(tempInput);
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.createElement('div');
+      toast.className = 'fixed bottom-5 right-5 bg-emerald-600 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-semibold z-50 transition-opacity duration-300';
+      toast.textContent = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 2200);
+    }
+  </script>
+</body>
+</html>
