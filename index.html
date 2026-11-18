@@ -6,6 +6,160 @@
   <title>Google Flow All-in-One Story & Video Prompt Generator</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'buanamedia-story-flow';
+    let app = null;
+    let auth = null;
+    let db = null;
+    let currentUser = null;
+    let unsubscribeProjects = null;
+
+    try {
+      if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+        const firebaseConfig = JSON.parse(__firebase_config);
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+      }
+    } catch (e) {
+      console.warn("Cloud initialization standby:", e);
+    }
+
+    async function initCloudSession() {
+      if (!auth) return;
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else if (!auth.currentUser) {
+          await signInAnonymously(auth);
+        }
+      } catch (err) {
+        console.warn("Auth init:", err);
+      }
+
+      onAuthStateChanged(auth, (user) => {
+        currentUser = user;
+        if (typeof window.updateGoogleAuthUI === 'function') {
+          window.updateGoogleAuthUI(user);
+        }
+        if (user && db) {
+          subscribeToUserProjects(user.uid);
+        }
+      });
+    }
+
+    window.loginWithGoogleAccount = async function() {
+      if (!auth) {
+        window.showToast("Layanan akun belum terkonfigurasi di lingkungan ini.");
+        return;
+      }
+      try {
+        const provider = new GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+        const result = await signInWithPopup(auth, provider);
+        if (result && result.user) {
+          window.showToast(`Berhasil masuk sebagai ${result.user.displayName || result.user.email}`);
+        }
+      } catch (err) {
+        if (err.code === 'auth/popup-blocked' || err.code === 'auth/unauthorized-domain' || err.code === 'auth/operation-not-supported-in-this-environment') {
+          window.showToast("Menggunakan sesi akun cloud otomatis untuk menyimpan project Anda.");
+          if (!auth.currentUser) {
+            await signInAnonymously(auth);
+          }
+        } else if (err.code !== 'auth/popup-closed-by-user') {
+          window.showToast("Gagal membuka popup Google: " + err.message);
+        }
+      }
+    };
+
+    window.logoutGoogleAccount = async function() {
+      if (!auth) return;
+      try {
+        await signOut(auth);
+        await signInAnonymously(auth);
+        window.showToast("Berhasil keluar dari akun Google.");
+      } catch (err) {
+        window.showToast("Gagal keluar akun.");
+      }
+    };
+
+    function subscribeToUserProjects(uid) {
+      if (!db || !uid) return;
+      if (unsubscribeProjects) unsubscribeProjects();
+      const projectsCol = collection(db, 'artifacts', appId, 'users', uid, 'projects');
+      unsubscribeProjects = onSnapshot(projectsCol, (snapshot) => {
+        const projects = [];
+        snapshot.forEach((docSnap) => {
+          projects.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        projects.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+        window.savedCloudProjects = projects;
+        window.renderSavedProjectsList(projects);
+      }, (error) => {
+        console.warn("Error fetching projects:", error);
+      });
+    }
+
+    window.saveCurrentStoryProject = async function() {
+      if (!auth || !db || !currentUser) {
+        window.showToast("Menghubungkan akun terlebih dahulu...");
+        return;
+      }
+      const storyText = document.getElementById('story-input').value.trim();
+      if (!storyText) {
+        window.showToast("Naskah cerita masih kosong untuk disimpan!");
+        return;
+      }
+
+      const defaultTitle = storyText.split(/[.!?\n]/)[0].slice(0, 42).trim() || "Project Cerita Baru";
+      const projectTitleInput = document.getElementById('project-title-input');
+      const title = (projectTitleInput && projectTitleInput.value.trim()) ? projectTitleInput.value.trim() : defaultTitle;
+      const projectId = window.currentActiveProjectId || ('proj_' + Date.now());
+
+      const projectPayload = {
+        title,
+        storyText,
+        aspectRatio: document.getElementById('aspect-ratio').value,
+        genre: document.getElementById('genre-select').value,
+        language: document.getElementById('language-select').value,
+        sceneCount: document.getElementById('scene-count-select').value,
+        generatedData: window.lastGeneratedResult ? JSON.stringify(window.lastGeneratedResult) : '',
+        updatedAt: Date.now()
+      };
+
+      try {
+        const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'projects', projectId);
+        await setDoc(docRef, projectPayload);
+        window.currentActiveProjectId = projectId;
+        if (projectTitleInput && !projectTitleInput.value.trim()) {
+          projectTitleInput.value = title;
+        }
+        window.showToast(`Project "${title}" tersimpan ke akun Anda!`);
+      } catch (err) {
+        window.showToast("Gagal menyimpan project: " + err.message);
+      }
+    };
+
+    window.deleteSavedProject = async function(projectId) {
+      if (!auth || !db || !currentUser) return;
+      try {
+        const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'projects', projectId);
+        await deleteDoc(docRef);
+        if (window.currentActiveProjectId === projectId) {
+          window.currentActiveProjectId = null;
+        }
+        window.showToast("Project berhasil dihapus.");
+      } catch (err) {
+        window.showToast("Gagal menghapus project.");
+      }
+    };
+
+    initCloudSession();
+  </script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
     body { 
@@ -47,16 +201,69 @@
       </div>
       
       <!-- Settings & Status Controls -->
-      <div class="flex items-center gap-2.5">
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button type="button" onclick="openProjectsModal()" class="flex items-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-medium text-sky-300 transition shadow-sm">
+          <i class="fa-solid fa-folder-open text-sky-400"></i>
+          <span>Project Tersimpan</span>
+          <span id="project-count-badge" class="bg-sky-950 text-sky-300 border border-sky-700/70 px-1.5 py-0.5 rounded-md font-mono text-[10px]">0</span>
+        </button>
+
         <button type="button" onclick="openApiModal()" class="flex items-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-medium text-slate-200 transition shadow-sm">
           <i class="fa-solid fa-gear text-amber-400"></i>
           <span>API Settings</span>
           <span id="api-count-badge" class="bg-emerald-950 text-emerald-300 border border-emerald-700/70 px-1.5 py-0.5 rounded-md font-mono text-[10px]">0 Keys</span>
         </button>
-        <span class="hidden sm:inline-block text-[11px] bg-purple-950/70 text-purple-300 border border-purple-800/70 px-2.5 py-1.5 rounded-xl font-mono">0xFlow / Veo Native</span>
+
+        <!-- Tombol Login dengan Google menggantikan badge 0xFlow / Veo Native -->
+        <div id="google-auth-container">
+          <button type="button" onclick="loginWithGoogleAccount()" class="flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-900 font-semibold text-xs px-3.5 py-1.5 rounded-xl shadow-md transition">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96z"/>
+            </svg>
+            <span>Login dengan Google</span>
+          </button>
+        </div>
       </div>
     </div>
   </header>
+
+  <!-- Saved Projects Modal -->
+  <div id="projects-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-cloud text-sky-400"></i>
+          <h3 class="text-sm font-bold text-white">Daftar Project Cerita Tersimpan</h3>
+        </div>
+        <button type="button" onclick="closeProjectsModal()" class="text-slate-400 hover:text-white text-sm px-2 py-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs">
+        <div id="modal-account-status" class="text-slate-300 flex items-center gap-2">
+          <i class="fa-solid fa-user-shield text-emerald-400"></i>
+          <span>Tersinkronisasi dengan Akun Anda</span>
+        </div>
+        <button type="button" onclick="startNewProject()" class="px-3 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-semibold transition flex items-center gap-1">
+          <i class="fa-solid fa-file-circle-plus"></i> Project Baru
+        </button>
+      </div>
+
+      <div id="saved-projects-list" class="max-h-72 overflow-y-auto space-y-2 bg-slate-950 border border-slate-800 rounded-xl p-3">
+        <p class="text-xs text-slate-500 text-center py-6">Belum ada cerita yang disimpan di akun ini.</p>
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-slate-800">
+        <button type="button" onclick="closeProjectsModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition">
+          Tutup
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Multi-API Key Settings Modal -->
   <div id="api-settings-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
@@ -116,6 +323,17 @@
           <button type="button" id="btn-sample-story" class="text-xs text-purple-400 hover:text-purple-300 underline font-medium flex items-center gap-1">
             <i class="fa-solid fa-lightbulb"></i> Isi Contoh Cerita
           </button>
+        </div>
+
+        <!-- Judul Project untuk Penyimpanan Akun -->
+        <div class="mb-3">
+          <label for="project-title-input" class="text-[11px] text-slate-400 block mb-1">Judul Project Cerita:</label>
+          <div class="flex gap-2">
+            <input type="text" id="project-title-input" placeholder="Contoh: Misteri Sumur Tua..." class="w-full text-xs rounded-xl px-3 py-2 focus:outline-none" />
+            <button type="button" onclick="saveCurrentStoryProject()" class="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold shrink-0 transition flex items-center gap-1.5 shadow-md shadow-sky-600/20" title="Simpan cerita & hasil generate ke akun">
+              <i class="fa-solid fa-cloud-arrow-up"></i> Simpan
+            </button>
+          </div>
         </div>
 
         <div class="grid grid-cols-2 gap-2.5 mb-3">
@@ -250,27 +468,162 @@ Ratna panik dan mundur ketakutan ke arah pintu lengkung sambil memegangi kebayan
 
 Bambang bergegas masuk membawa lampu minyak ke ruang sumur, memeriksa sudut gelap itu dan berkata tegas, "Ada apa, Ratna? Jangan berteriak subuh begini. Lihat ke sumur itu, ada bayangan tanpa kepala!"
 
-Asap rokok tebal masih mengepul di bibir sumur yang kini kosong. Bambang mengendus bau tembakau segar dan berkata cemas, "Hanya abu rokok, tidak ada siapa-siapa di sini. Baunya anyir, Mas! Dia baru saja bergerak! Ayo keluar ke beranda sekarang juga!"
+Asap rokok tebal masih mengepul di bibir sumur yang kini kosong. Bambang mengendus bau tembakau segar dan berkata cemas, "Hanya abu rokok, tidak ada siapa-siapa di sini. Baunya anyir, Mas! Dia baru saja bergerak! Ayo keluar ke beranda sekarang juga!"`;
 
-Ratna dan Bambang berlari ke beranda depan rumah dan mendapati pintu depan sudah terbuka lebar ke arah kabut subuh. Ratna bertanya ketakutan, "Mas, pintu depan sudah terbuka dari tadi?"`;
-
-    // In-memory state for Gemini API keys (safe across all iframe/sandboxed browsers)
+    // In-memory state for Gemini API keys & active cloud project
     let savedApiKeys = [];
+    window.savedCloudProjects = [];
+    window.currentActiveProjectId = null;
+    window.lastGeneratedResult = null;
 
     // DOM Elements
     const storyInput = document.getElementById('story-input');
     const charCount = document.getElementById('char-count');
     const wordCount = document.getElementById('word-count');
-    const btnGenerate = document.getElementById('btn-generate');
-    const btnSample = document.getElementById('btn-sample-story');
-    const emptyState = document.getElementById('empty-state');
-    const assetsWrapper = document.getElementById('assets-wrapper');
-    const scenesWrapper = document.getElementById('scenes-wrapper');
-    const scenesContainer = document.getElementById('scenes-container');
     const aspectRatioSelect = document.getElementById('aspect-ratio');
     const genreSelect = document.getElementById('genre-select');
     const languageSelect = document.getElementById('language-select');
     const sceneCountSelect = document.getElementById('scene-count-select');
+    const btnSample = document.getElementById('btn-sample-story');
+    const btnGenerate = document.getElementById('btn-generate');
+    const emptyState = document.getElementById('empty-state');
+    const assetsWrapper = document.getElementById('assets-wrapper');
+    const scenesWrapper = document.getElementById('scenes-wrapper');
+    const scenesContainer = document.getElementById('scenes-container');
+
+    function openProjectsModal() {
+      renderSavedProjectsList(window.savedCloudProjects || []);
+      document.getElementById('projects-modal').classList.remove('hidden');
+    }
+
+    function closeProjectsModal() {
+      document.getElementById('projects-modal').classList.add('hidden');
+    }
+
+    function startNewProject() {
+      window.currentActiveProjectId = null;
+      window.lastGeneratedResult = null;
+      document.getElementById('project-title-input').value = '';
+      storyInput.value = '';
+      storyInput.dispatchEvent(new Event('input'));
+      assetsWrapper.classList.add('hidden');
+      scenesWrapper.classList.add('hidden');
+      emptyState.classList.remove('hidden');
+      closeProjectsModal();
+      showToast('Lembar project baru siap digunakan.');
+    }
+
+    window.updateGoogleAuthUI = function(user) {
+      const container = document.getElementById('google-auth-container');
+      const modalStatus = document.getElementById('modal-account-status');
+      if (!container) return;
+
+      if (user && !user.isAnonymous) {
+        const displayName = user.displayName || user.email || 'Akun Google';
+        const photoHtml = user.photoURL
+          ? `<img src="${user.photoURL}" class="w-5 h-5 rounded-full border border-emerald-400" alt="Avatar" />`
+          : `<i class="fa-solid fa-circle-user text-emerald-400 text-sm"></i>`;
+
+        container.innerHTML = `
+          <div class="flex items-center gap-2 bg-slate-950 border border-emerald-700/70 rounded-xl px-3 py-1 text-xs">
+            ${photoHtml}
+            <span class="text-emerald-300 font-medium max-w-[130px] truncate">${displayName}</span>
+            <button type="button" onclick="logoutGoogleAccount()" class="text-slate-400 hover:text-rose-400 ml-1" title="Keluar Akun Google">
+              <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+          </div>
+        `;
+        if (modalStatus) {
+          modalStatus.innerHTML = `<i class="fa-brands fa-google text-emerald-400"></i> <span>Login sebagai <strong>${displayName}</strong></span>`;
+        }
+      } else {
+        container.innerHTML = `
+          <button type="button" onclick="loginWithGoogleAccount()" class="flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-900 font-semibold text-xs px-3.5 py-1.5 rounded-xl shadow-md transition">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96z"/>
+            </svg>
+            <span>Login dengan Google</span>
+          </button>
+        `;
+        if (modalStatus) {
+          modalStatus.innerHTML = `<i class="fa-solid fa-cloud text-sky-400"></i> <span>Sesi Cloud Aktif (Klik <strong>Login dengan Google</strong> untuk sinkronisasi akun)</span>`;
+        }
+      }
+    };
+
+    window.renderSavedProjectsList = function(projects) {
+      const listEl = document.getElementById('saved-projects-list');
+      const countBadge = document.getElementById('project-count-badge');
+      if (countBadge) countBadge.textContent = projects.length;
+      if (!listEl) return;
+
+      if (!projects || projects.length === 0) {
+        listEl.innerHTML = `<p class="text-xs text-slate-500 text-center py-6">Belum ada cerita yang disimpan. Klik tombol <strong>Simpan</strong> di sebelah kolom judul project.</p>`;
+        return;
+      }
+
+      listEl.innerHTML = projects.map(proj => {
+        const dateStr = proj.updatedAt ? new Date(proj.updatedAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) : '';
+        const isCurrent = window.currentActiveProjectId === proj.id;
+        return `
+          <div class="flex items-center justify-between gap-3 bg-slate-900 border ${isCurrent ? 'border-sky-500' : 'border-slate-800'} rounded-xl p-3">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <h4 class="text-xs font-bold text-white truncate">${proj.title || 'Tanpa Judul'}</h4>
+                ${isCurrent ? '<span class="text-[9px] bg-sky-950 text-sky-300 border border-sky-700 px-1.5 py-0.5 rounded">AKTIF</span>' : ''}
+              </div>
+              <p class="text-[11px] text-slate-400 truncate mt-0.5">${proj.storyText || ''}</p>
+              <span class="text-[10px] text-slate-500 block mt-1"><i class="fa-regular fa-clock mr-1"></i>${dateStr}</span>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button type="button" onclick="loadSavedProject('${proj.id}')" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-semibold transition">
+                Buka
+              </button>
+              <button type="button" onclick="deleteSavedProject('${proj.id}')" class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-rose-900/70 text-slate-400 hover:text-rose-300 text-[11px] transition" title="Hapus Project">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    };
+
+    window.loadSavedProject = function(projectId) {
+      const proj = (window.savedCloudProjects || []).find(p => p.id === projectId);
+      if (!proj) return;
+
+      window.currentActiveProjectId = proj.id;
+      document.getElementById('project-title-input').value = proj.title || '';
+      storyInput.value = proj.storyText || '';
+      storyInput.dispatchEvent(new Event('input'));
+
+      if (proj.aspectRatio) aspectRatioSelect.value = proj.aspectRatio;
+      if (proj.genre) genreSelect.value = proj.genre;
+      if (proj.language) languageSelect.value = proj.language;
+      if (proj.sceneCount) sceneCountSelect.value = proj.sceneCount;
+
+      if (proj.generatedData) {
+        try {
+          const parsed = JSON.parse(proj.generatedData);
+          window.lastGeneratedResult = parsed;
+          const langSpec = getLanguageSpec(languageSelect.value, storyInput.value);
+          const stylePrefix = getStylePrefix(genreSelect.value);
+          const ratio = aspectRatioSelect.value;
+
+          emptyState.classList.add('hidden');
+          const allAssets = renderReferenceAssetsFromAI(parsed.assets, stylePrefix, ratio);
+          renderScenesFromAI(parsed.scenes, allAssets, stylePrefix, ratio, langSpec);
+        } catch (e) {
+          console.warn("Could not parse saved generated data:", e);
+        }
+      }
+
+      closeProjectsModal();
+      showToast(`Project "${proj.title}" berhasil dimuat kembali!`);
+    };
 
     function openApiModal() {
       renderApiKeyList();
@@ -399,6 +752,7 @@ Ratna dan Bambang berlari ke beranda depan rumah dan mendapati pintu depan sudah
       try {
         const aiResult = await analyzeStoryWithGeminiMultiKey(text, stylePrefix, ratio, langSpec, targetSceneCount, savedApiKeys);
         const normalized = ensurePropsMappedInScenes(aiResult);
+        window.lastGeneratedResult = normalized;
         emptyState.classList.add('hidden');
 
         const allAssets = renderReferenceAssetsFromAI(normalized.assets, stylePrefix, ratio);
@@ -407,6 +761,7 @@ Ratna dan Bambang berlari ke beranda depan rumah dan mendapati pintu depan sudah
       } catch (err) {
         const fallbackResult = analyzeStoryLocallySmart(text, stylePrefix, ratio, langSpec, targetSceneCount);
         const normalized = ensurePropsMappedInScenes(fallbackResult);
+        window.lastGeneratedResult = normalized;
         emptyState.classList.add('hidden');
 
         const allAssets = renderReferenceAssetsFromAI(normalized.assets, stylePrefix, ratio);
