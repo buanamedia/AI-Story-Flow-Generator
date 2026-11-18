@@ -126,6 +126,7 @@
               <option value="16:9 Widescreen">16:9 Widescreen</option>
               <option value="1:1 Square">1:1 Square</option>
               <option value="4:5 Portrait">4:5 Portrait</option>
+              <option value="21:9 Cinema Ultrawide">21:9 Cinema Ultrawide</option>
             </select>
           </div>
           <div>
@@ -138,6 +139,8 @@
               <option value="dark moody Indonesian folklore horror cinema, 35mm film grain, atmospheric mist">Indonesian Folklore Horror</option>
               <option value="Studio Ghibli Hand-Painted Watercolor Anime, warm nostalgic atmosphere">Ghibli Watercolor Anime</option>
               <option value="Cyberpunk Neo-Noir 3D Unreal Engine 5 Render, volumetric neon fog">Cyberpunk Neo-Noir 3D</option>
+              <option value="Epic Historical Period Drama Cinema, natural golden hour lighting, 8k raw">Historical Period Drama</option>
+              <option value="Dark Fantasy Graphic Novel Concept Art, dramatic ink shadows, painterly texture">Dark Fantasy Concept Art</option>
             </select>
           </div>
         </div>
@@ -148,11 +151,24 @@
             <label for="lang-select" class="block text-[11px] text-slate-400 mb-1">Bahasa &amp; Aksen Voice-Over:</label>
             <select id="lang-select"
               class="w-full bg-[#0b0c12] border border-slate-800 focus:border-purple-500 rounded-xl px-2.5 py-2 text-xs text-slate-200 focus:outline-none">
-              <option value="Auto (match the language of the story)">Auto (match the language)</option>
-              <option value="Bahasa Indonesia (Natural Cinematic Narration)">Indonesia (Indonesian)</option>
-              <option value="English (US Dramatic Storytelling Accent)">English (US Narrator)</option>
-              <option value="Bahasa Jawa (Halus & Mistis)">Jawa (Indonesian Regional)</option>
-              <option value="Japanese (Anime Dramatic Voice)">Japanese (Anime)</option>
+              <option value="Auto (match the language of the story)">Auto (match the language of the story)</option>
+              <option value="Indonesia (Bahasa Indonesia Natural Cinematic Narration)">Indonesia (Indonesian)</option>
+              <option value="English US (American Dramatic Storytelling Accent)">English (US Narrator)</option>
+              <option value="English UK (British Documentary & Cinematic Accent)">English (UK Narrator)</option>
+              <option value="Jawa (Bahasa Jawa Halus & Mistis)">Jawa (Indonesian Regional)</option>
+              <option value="Sunda (Bahasa Sunda Natural & Ekspresif)">Sunda (Indonesian Regional)</option>
+              <option value="Melayu (Bahasa Melayu Klasik & Sinematik)">Melayu (Malay)</option>
+              <option value="Japanese (Anime Dramatic Voice Acting)">Japanese (Anime)</option>
+              <option value="Korean (K-Drama Emotional Narration)">Korean (K-Drama)</option>
+              <option value="Mandarin Chinese (Cinematic Storytelling)">Mandarin (Chinese)</option>
+              <option value="Arabic (Fusha Dramatic Narration)">Arabic (Fusha)</option>
+              <option value="Spanish (Latin / Castilian Dramatic)">Spanish (Español)</option>
+              <option value="French (Cinematic Parisian Narration)">French (Français)</option>
+              <option value="German (Dramatic Documentary Voice)">German (Deutsch)</option>
+              <option value="Russian (Deep Dramatic Narration)">Russian (Русский)</option>
+              <option value="Hindi (Bollywood Dramatic Storytelling)">Hindi (हिन्दी)</option>
+              <option value="Thai (Dramatic Thai Narration)">Thai (ไทย)</option>
+              <option value="Vietnamese (Natural Storytelling Voice)">Vietnamese (Tiếng Việt)</option>
             </select>
           </div>
           <div>
@@ -161,10 +177,12 @@
               class="w-full bg-[#0b0c12] border border-slate-800 focus:border-purple-500 rounded-xl px-2.5 py-2 text-xs text-slate-200 focus:outline-none">
               <option value="auto">Auto (Sesuai Paragraf)</option>
               <option value="3">3 Scene</option>
+              <option value="4">4 Scene</option>
               <option value="5">5 Scene</option>
               <option value="6">6 Scene</option>
               <option value="8">8 Scene</option>
               <option value="10">10 Scene</option>
+              <option value="12">12 Scene</option>
             </select>
           </div>
         </div>
@@ -263,8 +281,8 @@
   </div>
 
   <!-- TOAST NOTIFICATION -->
-  <div id="toast-notification" class="hidden fixed bottom-5 right-5 z-50 bg-emerald-600 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-xl border border-emerald-400/30 flex items-center gap-2">
-    <i class="fa-solid fa-circle-check"></i>
+  <div id="toast-notification" class="hidden fixed bottom-5 right-5 z-50 bg-emerald-600 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-xl border border-emerald-400/30 flex items-center gap-2 max-w-md">
+    <i class="fa-solid fa-circle-check shrink-0"></i>
     <span id="toast-message">Notifikasi</span>
   </div>
 
@@ -277,7 +295,7 @@
 
     let googleTokenClient = null;
     window.currentGoogleProfile = null;
-    window.googleOAuthAccessToken = null;
+    window.googleOAuthAccessToken = sessionStorage.getItem('bm_google_oauth_token') || null;
 
     window.showToast = function (msg) {
       const toast = document.getElementById('toast-notification');
@@ -288,7 +306,7 @@
       clearTimeout(window._toastTimer);
       window._toastTimer = setTimeout(() => {
         toast.classList.add('hidden');
-      }, 3200);
+      }, 4200);
     };
 
     window.updateGoogleAuthUI = function (profile) {
@@ -329,6 +347,7 @@
           callback: async (tokenResponse) => {
             if (tokenResponse && tokenResponse.access_token) {
               window.googleOAuthAccessToken = tokenResponse.access_token;
+              sessionStorage.setItem('bm_google_oauth_token', tokenResponse.access_token);
               try {
                 const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
                   headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
@@ -346,7 +365,7 @@
                   window.updateApiBadges();
                 }
                 window.loadUserProjectsFromStorage();
-                window.showToast(`Berhasil login sebagai ${window.currentGoogleProfile.displayName} (Gemini AI Google Aktif)!`);
+                window.showToast(`Terhubung ke akun Google: ${window.currentGoogleProfile.displayName} (Gemini AI Aktif)!`);
               } catch (err) {
                 window.showToast("Gagal mengambil profil akun Google.");
               }
@@ -377,6 +396,7 @@
       window.currentGoogleProfile = null;
       window.googleOAuthAccessToken = null;
       localStorage.removeItem('bm_google_user_profile');
+      sessionStorage.removeItem('bm_google_oauth_token');
       window.updateGoogleAuthUI(null);
       if (typeof window.updateApiBadges === 'function') {
         window.updateApiBadges();
@@ -405,12 +425,12 @@
       const badge = document.getElementById('api-count-badge');
       const indicator = document.getElementById('api-status-indicator');
       const count = savedApiKeys.length;
-      const hasGoogleOAuth = Boolean(window.googleOAuthAccessToken || (window.currentGoogleProfile && window.currentGoogleProfile.uid));
+      const hasGoogleAccount = Boolean(window.googleOAuthAccessToken || (window.currentGoogleProfile && window.currentGoogleProfile.uid));
 
       if (badge) {
         if (count > 0) {
           badge.textContent = `${count} ${count === 1 ? 'Key' : 'Keys'}`;
-        } else if (hasGoogleOAuth) {
+        } else if (hasGoogleAccount) {
           badge.textContent = `Google AI`;
         } else {
           badge.textContent = `0 Keys`;
@@ -420,7 +440,7 @@
         if (count > 0) {
           indicator.className = 'text-[10px] text-emerald-400 hover:underline flex items-center gap-1';
           indicator.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${count} Gemini API Key Aktif`;
-        } else if (hasGoogleOAuth) {
+        } else if (hasGoogleAccount) {
           indicator.className = 'text-[10px] text-sky-400 hover:underline flex items-center gap-1';
           indicator.innerHTML = `<i class="fa-brands fa-google"></i> Terhubung Akun Google AI`;
         } else {
@@ -455,7 +475,7 @@
       }
 
       // 3. Prioritas 3: Gunakan Smart Local Engine
-      throw new Error('No API key or Google OAuth token connected');
+      throw new Error('LOCAL_FALLBACK');
     }
 
     async function callGeminiSingleKey(storyText, stylePrefix, ratio, langSpec, targetSceneCount, apiKey, oauthToken = null) {
@@ -488,7 +508,8 @@ Return ONLY valid JSON with this exact schema (no markdown fences):
       "id": "scene_001",
       "title": "Short Scene Title",
       "references": ["asset_001", "asset_002"],
-      "video_prompt": "Detailed English cinematic video prompt referencing asset IDs, camera movement, lighting, and action.",
+      "image_prompt": "Detailed English start-frame keyframe image prompt combining the referenced assets, composition, and lighting in the requested Visual Style Prefix and Aspect Ratio.",
+      "video_prompt": "Detailed English cinematic video motion prompt referencing asset IDs, camera movement, lighting, and action.",
       "dialogue": "Narration or dialogue in requested language",
       "voice_over": "Voice direction + narration"
     }
@@ -518,7 +539,17 @@ Return ONLY valid JSON with this exact schema (no markdown fences):
         headers,
         body: JSON.stringify(payload)
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      if (!response.ok) {
+        let errDetail = `HTTP ${response.status}`;
+        try {
+          const errJson = await response.json();
+          if (errJson.error && errJson.error.message) {
+            errDetail = errJson.error.message;
+          }
+        } catch (e) {}
+        throw new Error(errDetail);
+      }
 
       const data = await response.json();
       const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
@@ -586,6 +617,7 @@ Return ONLY valid JSON with this exact schema (no markdown fences):
           id: `scene_${idxStr}`,
           title: `Adegan ${i + 1}`,
           references: ['asset_001', 'asset_002', 'asset_003'],
+          image_prompt: `${stylePrefix}, ${ratio} cinematic keyframe still of Tokoh Utama (asset_001) inside Latar Utama Cerita (asset_002) with Artefak Kunci Cerita (asset_003), depicting: "${sourceChunk}". Dramatic lighting, detailed composition, 8k film still, no text, no watermark.`,
           video_prompt: `[STYLE]: ${stylePrefix} | [RATIO]: ${ratio} | [CAMERA]: ${camera} | [ACTION]: Tokoh Utama (asset_001) berada di Latar Utama Cerita (asset_002) berinteraksi dengan Artefak Kunci Cerita (asset_003) sesuai alur: "${sourceChunk}". Pencahayaan dramatis, gerakan kamera halus 24fps, detail sinematik tinggi.`,
           dialogue: sourceChunk,
           voice_over: `${langSpec} — "${sourceChunk}"`
@@ -596,7 +628,7 @@ Return ONLY valid JSON with this exact schema (no markdown fences):
     }
 
     // =========================================================================
-    // RENDER KARTU REFERENCE ASSETS & CONTINUOUS SCENES
+    // RENDER KARTU REFERENCE ASSETS & CONTINUOUS SCENES (DENGAN IMAGE & VIDEO SCENE)
     // =========================================================================
     function renderResults(assets, scenes, engineLabel = 'Smart Local Engine') {
       const container = document.getElementById('results-container');
@@ -648,35 +680,52 @@ Return ONLY valid JSON with this exact schema (no markdown fences):
         const sceneId = scene.id || `scene_${String(idx + 1).padStart(3, '0')}`;
         const refs = Array.isArray(scene.references) ? scene.references : [];
         const refsBadges = refs.map(r => `<span class="font-mono text-[11px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded">${escapeHtml(r)}</span>`).join('');
+        const sceneImagePrompt = scene.image_prompt || `${scene.video_prompt || ''} --still keyframe`;
 
         return `
           <div class="bg-[#13141f] border border-slate-800/90 rounded-2xl p-5 shadow-lg">
-            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3.5">
               <div class="flex flex-wrap items-center gap-2">
                 <span class="font-mono text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-lg">${escapeHtml(sceneId)}</span>
                 <h4 class="text-sm font-bold text-white">${escapeHtml(scene.title || `Scene ${idx + 1}`)}</h4>
                 <div class="flex items-center gap-1 ml-1">${refsBadges}</div>
               </div>
-              <button type="button" onclick="copyTextFromButton(this)" data-copy="${escapeHtml(scene.video_prompt || '')}"
-                class="text-xs bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 px-3 py-1.5 rounded-lg border border-emerald-500/30 transition flex items-center gap-1.5">
-                <i class="fa-regular fa-copy"></i> Copy Video Prompt
-              </button>
-            </div>
-            <div class="space-y-3">
-              <div>
-                <label class="text-[11px] uppercase tracking-wider text-slate-400 block mb-1">Video / Flow Prompt</label>
-                <textarea readonly rows="4" class="w-full bg-[#0b0c12] border border-slate-800 rounded-xl p-3 text-xs font-mono text-slate-200 leading-relaxed resize-none focus:outline-none">${escapeHtml(scene.video_prompt || '')}</textarea>
-              </div>
-              <div class="bg-[#0b0c12] border border-slate-800/80 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2">
-                <div class="text-xs text-slate-300">
-                  <span class="text-purple-400 font-semibold"><i class="fa-solid fa-microphone-lines mr-1"></i> Voice-Over / Narasi:</span>
-                  <span class="ml-1">${escapeHtml(scene.voice_over || scene.dialogue || '')}</span>
-                </div>
-                <button type="button" onclick="copyTextFromButton(this)" data-copy="${escapeHtml(scene.dialogue || scene.voice_over || '')}"
-                  class="text-[11px] text-slate-400 hover:text-white bg-slate-800/80 px-2.5 py-1 rounded-lg transition">
-                  <i class="fa-regular fa-copy mr-1"></i> Copy VO
+              <div class="flex flex-wrap items-center gap-2">
+                <button type="button" onclick="copyTextFromButton(this)" data-copy="${escapeHtml(sceneImagePrompt)}"
+                  class="text-xs bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 px-3 py-1.5 rounded-lg border border-purple-500/30 transition flex items-center gap-1.5">
+                  <i class="fa-regular fa-image"></i> Copy Image Prompt
+                </button>
+                <button type="button" onclick="copyTextFromButton(this)" data-copy="${escapeHtml(scene.video_prompt || '')}"
+                  class="text-xs bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 px-3 py-1.5 rounded-lg border border-emerald-500/30 transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-film"></i> Copy Video Prompt
                 </button>
               </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+              <div>
+                <label class="text-[11px] uppercase tracking-wider text-purple-300/90 font-semibold block mb-1">
+                  <i class="fa-regular fa-image mr-1"></i> Image Prompt (Start Frame / Keyframe)
+                </label>
+                <textarea readonly rows="4" class="w-full bg-[#0b0c12] border border-slate-800 rounded-xl p-3 text-xs font-mono text-slate-200 leading-relaxed resize-none focus:outline-none">${escapeHtml(sceneImagePrompt)}</textarea>
+              </div>
+              <div>
+                <label class="text-[11px] uppercase tracking-wider text-emerald-300/90 font-semibold block mb-1">
+                  <i class="fa-solid fa-film mr-1"></i> Video Prompt (Flow / Motion)
+                </label>
+                <textarea readonly rows="4" class="w-full bg-[#0b0c12] border border-slate-800 rounded-xl p-3 text-xs font-mono text-slate-200 leading-relaxed resize-none focus:outline-none">${escapeHtml(scene.video_prompt || '')}</textarea>
+              </div>
+            </div>
+
+            <div class="bg-[#0b0c12] border border-slate-800/80 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2">
+              <div class="text-xs text-slate-300">
+                <span class="text-purple-400 font-semibold"><i class="fa-solid fa-microphone-lines mr-1"></i> Voice-Over / Narasi:</span>
+                <span class="ml-1">${escapeHtml(scene.voice_over || scene.dialogue || '')}</span>
+              </div>
+              <button type="button" onclick="copyTextFromButton(this)" data-copy="${escapeHtml(scene.dialogue || scene.voice_over || '')}"
+                class="text-[11px] text-slate-400 hover:text-white bg-slate-800/80 px-2.5 py-1 rounded-lg transition">
+                <i class="fa-regular fa-copy mr-1"></i> Copy VO
+              </button>
             </div>
           </div>
         `;
@@ -702,7 +751,7 @@ Return ONLY valid JSON with this exact schema (no markdown fences):
             <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
               <div class="flex items-center gap-2.5">
                 <span class="text-[11px] font-bold uppercase tracking-wider bg-emerald-600 text-white px-2.5 py-1 rounded-md">Continuous Scenes</span>
-                <h3 class="text-sm font-bold text-white">Alur Adegan Video &amp; Voice-Over</h3>
+                <h3 class="text-sm font-bold text-white">Alur Adegan Image, Video &amp; Voice-Over</h3>
               </div>
               <span class="text-xs text-slate-400">${scenes.length} Scenes</span>
             </div>
@@ -964,14 +1013,26 @@ Return ONLY valid JSON with this exact schema (no markdown fences):
                 savedApiKeys
               );
               engineUsed = savedApiKeys.length > 0 ? 'Gemini API Key' : 'Akun Google AI';
+              window.showToast(`Berhasil membuat ${resultPlan.assets.length} Assets & ${resultPlan.scenes.length} Scenes (${engineUsed})!`);
             } catch (aiErr) {
+              // Jika user sudah login Google namun token kedaluwarsa atau API belum di-enable di Google Cloud
+              if (aiErr && aiErr.message !== 'LOCAL_FALLBACK' && (savedApiKeys.length > 0 || window.googleOAuthAccessToken)) {
+                if (String(aiErr.message).includes('401') || String(aiErr.message).includes('UNAUTHENTICATED')) {
+                  window.googleOAuthAccessToken = null;
+                  sessionStorage.removeItem('bm_google_oauth_token');
+                  window.showToast('Sesi token Google kedaluwarsa. Klik Login Google ulang atau dialihkan ke Smart Local Engine.');
+                } else {
+                  window.showToast(`Fallback ke Lokal: ${aiErr.message}`);
+                }
+              } else if (window.currentGoogleProfile && !window.googleOAuthAccessToken && savedApiKeys.length === 0) {
+                window.showToast('Klik tombol Login Google sekali lagi untuk menyegarkan izin Gemini AI.');
+              }
               resultPlan = buildLocalStoryPlan(storyText, stylePrefix, ratio, langSpec, targetSceneCount);
               engineUsed = 'Smart Local Engine';
             }
 
             latestGeneratedData = resultPlan;
             renderResults(resultPlan.assets, resultPlan.scenes, engineUsed);
-            window.showToast(`Berhasil membuat ${resultPlan.assets.length} Assets & ${resultPlan.scenes.length} Scenes (${engineUsed})!`);
           } finally {
             btnGenerate.disabled = false;
             btnGenerate.innerHTML = originalBtnHtml;
@@ -1048,6 +1109,7 @@ window.openQrisModal();
 }, 300);
 });
 </script>
+
   
 </body>
 </html>
