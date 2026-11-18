@@ -8,14 +8,14 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // =========================================================================
-    // KONFIGURASI AKUN GOOGLE (TEMPELKAN CONFIG DARI FIREBASE CONSOLE DI SINI)
+    // KONFIGURASI AKUN GOOGLE (SUDAH TERHUBUNG KE PROJECT BUANAMEDIA-STORY-FLOW)
     // =========================================================================
     const CUSTOM_FIREBASE_CONFIG = {
-      apiKey: "AIzaSyDYK2p3mmynHzYnY5PUiUNrskuxPLp3G5Q",
+      apiKey: "AIzaSyDYK2p3mmynHzYnY5PUIUNrskuxPLp3G5Q",
       authDomain: "buanamedia-story-flow.firebaseapp.com",
       projectId: "buanamedia-story-flow",
       storageBucket: "buanamedia-story-flow.firebasestorage.app",
@@ -32,14 +32,11 @@
     let unsubscribeProjects = null;
 
     try {
-      let activeConfig = null;
-      if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-        activeConfig = JSON.parse(__firebase_config);
-      } else if (CUSTOM_FIREBASE_CONFIG.apiKey && !CUSTOM_FIREBASE_CONFIG.apiKey.startsWith("PASTE_")) {
-        activeConfig = CUSTOM_FIREBASE_CONFIG;
-      }
+      const activeConfig = (typeof __firebase_config !== 'undefined' && __firebase_config)
+        ? JSON.parse(__firebase_config)
+        : CUSTOM_FIREBASE_CONFIG;
 
-      if (activeConfig) {
+      if (activeConfig && activeConfig.apiKey) {
         app = initializeApp(activeConfig);
         auth = getAuth(app);
         db = getFirestore(app);
@@ -50,6 +47,16 @@
 
     async function initCloudSession() {
       if (!auth) return;
+      try {
+        // Tangkap hasil login jika menggunakan metode redirect
+        const redirectRes = await getRedirectResult(auth);
+        if (redirectRes && redirectRes.user) {
+          window.showToast(`Berhasil masuk sebagai ${redirectRes.user.displayName || redirectRes.user.email}`);
+        }
+      } catch (redirectErr) {
+        console.warn("Redirect result check:", redirectErr);
+      }
+
       try {
         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
           await signInWithCustomToken(auth, __initial_auth_token);
@@ -73,24 +80,31 @@
 
     window.loginWithGoogleAccount = async function() {
       if (!auth) {
-        window.showToast("Layanan akun belum terkonfigurasi di lingkungan ini.");
+        window.showToast("Layanan Firebase Auth belum siap. Muat ulang halaman.");
         return;
       }
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+
       try {
-        const provider = new GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
         const result = await signInWithPopup(auth, provider);
         if (result && result.user) {
           window.showToast(`Berhasil masuk sebagai ${result.user.displayName || result.user.email}`);
         }
       } catch (err) {
-        if (err.code === 'auth/popup-blocked' || err.code === 'auth/unauthorized-domain' || err.code === 'auth/operation-not-supported-in-this-environment') {
-          window.showToast("Menggunakan sesi akun cloud otomatis untuk menyimpan project Anda.");
-          if (!auth.currentUser) {
-            await signInAnonymously(auth);
+        if (err.code === 'auth/popup-blocked' || err.code === 'auth/operation-not-supported-in-this-environment') {
+          try {
+            window.showToast("Mengalihkan ke halaman Login Google...");
+            await signInWithRedirect(auth, provider);
+          } catch (redirErr) {
+            window.showToast("Buka langsung https://www.buanamedia.my.id/p/ai-story-flow-generator.html di tab browser untuk login Google.");
           }
+        } else if (err.code === 'auth/unauthorized-domain') {
+          window.showToast(`Domain "${window.location.hostname}" belum diotorisasi di Firebase!`);
+        } else if (err.code === 'auth/operation-not-allowed') {
+          window.showToast("Provider Google belum diaktifkan di Firebase Console!");
         } else if (err.code !== 'auth/popup-closed-by-user') {
-          window.showToast("Gagal membuka popup Google: " + err.message);
+          window.showToast(`Gagal login Google (${err.code || err.message})`);
         }
       }
     };
