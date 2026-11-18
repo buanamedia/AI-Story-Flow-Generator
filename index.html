@@ -32,9 +32,10 @@
     let unsubscribeProjects = null;
 
     try {
-      const activeConfig = (typeof __firebase_config !== 'undefined' && __firebase_config)
-        ? JSON.parse(__firebase_config)
-        : CUSTOM_FIREBASE_CONFIG;
+      // Prioritaskan konfigurasi proyek Firebase milik Anda (buanamedia-story-flow)
+      const activeConfig = (CUSTOM_FIREBASE_CONFIG && CUSTOM_FIREBASE_CONFIG.apiKey && !CUSTOM_FIREBASE_CONFIG.apiKey.includes("TEMPEL"))
+        ? CUSTOM_FIREBASE_CONFIG
+        : ((typeof __firebase_config !== 'undefined' && __firebase_config) ? JSON.parse(__firebase_config) : null);
 
       if (activeConfig && activeConfig.apiKey) {
         app = initializeApp(activeConfig);
