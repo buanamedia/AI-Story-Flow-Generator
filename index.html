@@ -11,6 +11,19 @@
     import { getAuth, signInAnonymously, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+    // =========================================================================
+    // KONFIGURASI AKUN GOOGLE (TEMPELKAN CONFIG DARI FIREBASE CONSOLE DI SINI)
+    // =========================================================================
+    const CUSTOM_FIREBASE_CONFIG = {
+      apiKey: "AIzaSyDYK2p3mmynHzYnY5PUiUNrskuxPLp3G5Q",
+      authDomain: "buanamedia-story-flow.firebaseapp.com",
+      projectId: "buanamedia-story-flow",
+      storageBucket: "buanamedia-story-flow.firebasestorage.app",
+      messagingSenderId: "975485898014",
+      appId: "1:975485898014:web:2a21db3310f9c04cb7cd0f"
+    };
+    // =========================================================================
+
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'buanamedia-story-flow';
     let app = null;
     let auth = null;
@@ -19,9 +32,15 @@
     let unsubscribeProjects = null;
 
     try {
+      let activeConfig = null;
       if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-        const firebaseConfig = JSON.parse(__firebase_config);
-        app = initializeApp(firebaseConfig);
+        activeConfig = JSON.parse(__firebase_config);
+      } else if (CUSTOM_FIREBASE_CONFIG.apiKey && !CUSTOM_FIREBASE_CONFIG.apiKey.startsWith("PASTE_")) {
+        activeConfig = CUSTOM_FIREBASE_CONFIG;
+      }
+
+      if (activeConfig) {
+        app = initializeApp(activeConfig);
         auth = getAuth(app);
         db = getFirestore(app);
       }
