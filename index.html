@@ -1505,5 +1505,27 @@ SAFETY — Original fictional adult characters only. No real people, no celebrit
       }, 2400);
     }
   </script>
+
+</script>
+
+<!-- 1. Script Modal Popup & Floating -->
+    <script src="https://raw.githack.com/buanamedia/qris/main/qris-popup.js?v=300"></script>
+    <script src="https://raw.githack.com/buanamedia/qris/main/qris-floating.js?v=300"></script>
+
+    <!-- 2. Script Banner Firebase Realtime (Wajib type="module") -->
+    <script type="module" src="https://raw.githack.com/buanamedia/qris/main/qris-banner.js?v=300"></script>
+
+    <!-- Pemicu Otomatis Buka Modal -->
+    <script>
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                if (typeof window.openQrisModal === 'function') {
+                    window.openQrisModal();
+                }
+            }, 300);
+        });
+    </script>
+
+  
 </body>
 </html>
