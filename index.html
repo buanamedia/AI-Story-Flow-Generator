@@ -104,6 +104,8 @@
           window.showToast(`Domain "${window.location.hostname}" belum diotorisasi di Firebase!`);
         } else if (err.code === 'auth/operation-not-allowed') {
           window.showToast("Provider Google belum diaktifkan di Firebase Console!");
+        } else if (err.code === 'auth/api-key-not-valid.-please-pass-a-valid-api-key.' || (err.message && err.message.includes('api-key-not-valid'))) {
+          window.showToast("API Key Firebase dibatasi di Google Cloud Console! Buka Credentials > Browser Key > set API Restrictions ke 'Don't restrict key'.");
         } else if (err.code !== 'auth/popup-closed-by-user') {
           window.showToast(`Gagal login Google (${err.code || err.message})`);
         }
