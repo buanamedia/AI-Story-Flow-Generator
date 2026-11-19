@@ -1096,8 +1096,9 @@ ${storyText}`;
         const propsDescStr = activeProps.length > 0
           ? ` Props featured: ${activeProps.map(p => `${p.name} [${p.id}] (${p.visualDescription})`).join(', ')}.`
           : '';
-        const startFrameFileName = `${sceneId}_startframe.png`;
-        const videoFileName = `${sceneId}.mp4`;
+        const cleanSceneCode = sceneId.replace(/_/g, '');
+        const startFrameFileName = `${cleanSceneCode}.jpg`;
+        const videoFileName = `${cleanSceneCode}.mp4`;
 
         const imagePrompt = `[OUTPUT_FILENAME: ${startFrameFileName}]\n${stylePrefix}, ${ratio} START FRAME of scene ${sceneNum} (${sceneId}). Location: ${activeLoc ? activeLoc.name + ' (' + activeLoc.visualDescription + ')' : 'traditional dim interior'}. ${cLeft ? `${cLeft.name} stands on camera LEFT (${cLeft.visualDescription})` : ''}${cRight ? `, facing ${cRight.name} positioned on camera RIGHT (${cRight.visualDescription})` : ''}.${propsDescStr} Action moment: ${caption}. Keep character faces, outfits, and props strictly consistent with reference assets (${activeAssets.map(a => a.id).join(', ')}). Save generated image file as "${startFrameFileName}". No text, no subtitles, no watermark.`;
 
@@ -1191,8 +1192,8 @@ SAFETY — Original fictional adult characters only. No real people, no celebrit
 
         let fullImagePrompt = '';
         let typeBadgeClass = 'bg-purple-950 text-purple-300 border-purple-800/70';
-        const slugName = String(asset.name || 'asset').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
-        const assetFileName = `${assetId}_${slugName || 'item'}.png`;
+        const cleanAssetCode = assetId.replace(/_/g, '');
+        const assetFileName = `${cleanAssetCode}.jpg`;
 
         if (asset.type === 'Character') {
           typeBadgeClass = 'bg-purple-950 text-purple-300 border-purple-800/70';
@@ -1273,13 +1274,17 @@ SAFETY — Original fictional adult characters only. No real people, no celebrit
 
         const card = document.createElement('div');
         card.className = 'bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4';
-        const sceneStartFile = `${sceneId}_startframe.png`;
-        const sceneVideoFile = `${sceneId}.mp4`;
+        const cleanSceneCode = sceneId.replace(/_/g, '');
+        const sceneStartFile = `${cleanSceneCode}.jpg`;
+        const sceneVideoFile = `${cleanSceneCode}.mp4`;
         card.innerHTML = `
           <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800">
             <div class="flex flex-wrap items-center gap-2">
               <span class="font-mono text-xs font-bold text-emerald-400">${sceneId}</span>
               <span class="text-[11px] text-slate-400">Part ${sceneNum} of ${scenesList.length}</span>
+              <button type="button" onclick="copyPlainText('${sceneStartFile}')" title="Salin nama file gambar" class="text-[10px] font-mono bg-slate-950 hover:bg-slate-800 text-amber-300 border border-slate-700 px-2 py-0.5 rounded flex items-center gap-1">
+                <i class="fa-regular fa-image"></i> ${sceneStartFile}
+              </button>
               <button type="button" onclick="copyPlainText('${sceneVideoFile}')" title="Salin nama file video" class="text-[10px] font-mono bg-slate-950 hover:bg-slate-800 text-emerald-300 border border-slate-700 px-2 py-0.5 rounded flex items-center gap-1">
                 <i class="fa-solid fa-film"></i> ${sceneVideoFile}
               </button>
