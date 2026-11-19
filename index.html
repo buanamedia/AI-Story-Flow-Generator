@@ -1,374 +1,481 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Google Flow All-in-One Story & Video Prompt Generator</title>
+  <title>AI Story & Flow Asset Generator</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <!-- Google Identity Services (OAuth 2.0 Resmi) -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
-    body { 
-      font-family: 'Inter', sans-serif; 
-      background-color: #0b0b12 !important; 
+    * {
+      box-sizing: border-box;
+    }
+    html, body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #090a10 !important;
       color: #f8fafc !important;
       margin: 0;
+      padding: 0;
+      min-height: 100vh;
     }
-    .font-mono { font-family: 'Fira Code', monospace; }
-    
-    /* Dark theme matching 0xFlow AI Story interface */
-    select, option, textarea, input[type="text"], input[type="password"] {
-      background-color: #13131f !important;
-      color: #f1f5f9 !important;
-      border: 1px solid #26263a !important;
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
     }
-    textarea:focus, select:focus, input:focus {
-      border-color: #8b5cf6 !important;
-      outline: none !important;
+    /* Fallback Dark Theme & Layout jika CDN Tailwind lambat */
+    header {
+      background-color: rgba(13, 14, 23, 0.95) !important;
+      border-bottom: 1px solid #1e293b;
+      padding: 14px 20px;
     }
-    .bg-slate-950 { background-color: #0b0b12 !important; }
-    .bg-slate-900\/90, .bg-slate-900 { background-color: #13131f !important; }
-    .border-slate-800 { border-color: #26263a !important; }
+    header > div, main {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+    header > div {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    main {
+      padding: 24px 16px;
+    }
+    main > div {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+    @media (min-width: 1024px) {
+      main > div {
+        grid-template-columns: 4fr 8fr;
+      }
+    }
+    section, .card-dark {
+      background-color: #11121c !important;
+      border: 1px solid #1e293b !important;
+      border-radius: 16px;
+      padding: 20px;
+      color: #f8fafc;
+    }
+    input, select, textarea {
+      background-color: #0b0c12 !important;
+      color: #f8fafc !important;
+      border: 1px solid #27293d !important;
+      border-radius: 12px;
+      padding: 8px 12px;
+      font-size: 13px;
+      width: 100%;
+    }
+    textarea#story-input {
+      height: 144px;
+      resize: none;
+    }
+    button {
+      cursor: pointer;
+      border-radius: 12px;
+      font-weight: 600;
+      border: 1px solid #27293d;
+      padding: 8px 14px;
+      background-color: #151724;
+      color: #f8fafc;
+    }
+    button#btn-generate {
+      background: linear-gradient(to right, #9333ea, #4f46e5) !important;
+      color: #ffffff !important;
+      border: none !important;
+      width: 100%;
+      padding: 12px 16px;
+    }
+    button#btn-save-project {
+      background-color: #0284c7 !important;
+      color: #ffffff !important;
+      border: none !important;
+      width: auto;
+    }
+    .hidden {
+      display: none !important;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0d0e17;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #27293d;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3f4261;
+    }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+<body class="bg-[#090a10] text-slate-100 antialiased selection:bg-purple-500/30 selection:text-purple-200">
 
-  <!-- Header -->
-  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 py-3.5 flex flex-wrap justify-between items-center gap-3">
+  <!-- HEADER / NAVBAR -->
+  <header class="sticky top-0 z-30 bg-[#0d0e17]/90 backdrop-blur-md border-b border-slate-800/80 px-4 sm:px-6 py-3.5">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-purple-500/20">
-          <i class="fa-solid fa-wand-magic-sparkles"></i>
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 via-violet-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/25">
+          <i class="fa-solid fa-wand-magic-sparkles text-white text-lg"></i>
         </div>
         <div>
-          <h1 class="text-lg font-bold text-white tracking-tight">AI Story & Flow Asset Generator</h1>
-          <p class="text-[11px] text-slate-400">Reference Assets (<code>asset_001+</code>) & Continuous Scenes (<code>scene_001+</code>)</p>
+          <h1 class="text-base sm:text-lg font-extrabold tracking-tight text-white leading-tight">
+            AI Story &amp; Flow Asset Generator
+          </h1>
+          <p class="text-[11px] sm:text-xs text-slate-400 font-mono">
+            Reference Assets (<span class="text-purple-400">asset_001+</span>) &amp; Continuous Scenes (<span class="text-emerald-400">scene_001+</span>)
+          </p>
         </div>
       </div>
-      
-      <!-- Settings, Google Auth, Saved Projects & Status Controls -->
-      <div class="flex flex-wrap items-center gap-2.5">
-        <button type="button" onclick="openSavedProjectsModal()" class="flex items-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-medium text-slate-200 transition shadow-sm">
+
+      <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
+        <button id="btn-saved-projects" type="button"
+          class="bg-[#151724] hover:bg-[#1c1f30] text-slate-200 text-xs font-semibold px-3.5 py-2 rounded-xl border border-slate-800 transition flex items-center gap-2">
           <i class="fa-solid fa-folder-open text-sky-400"></i>
           <span>Project Tersimpan</span>
-          <span id="saved-projects-badge" class="bg-sky-950 text-sky-300 border border-sky-700/70 px-1.5 py-0.5 rounded-md font-mono text-[10px]">0</span>
+          <span id="saved-projects-count" class="bg-sky-500/20 text-sky-300 border border-sky-500/30 font-mono text-[11px] px-1.5 py-0.2 rounded-md">0</span>
         </button>
 
-        <button type="button" onclick="openApiModal()" class="flex items-center gap-2 bg-slate-950 hover:bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-xs font-medium text-slate-200 transition shadow-sm">
+        <button id="btn-api-settings" type="button"
+          class="bg-[#151724] hover:bg-[#1c1f30] text-slate-200 text-xs font-semibold px-3.5 py-2 rounded-xl border border-slate-800 transition flex items-center gap-2">
           <i class="fa-solid fa-gear text-amber-400"></i>
           <span>API Settings</span>
-          <span id="api-count-badge" class="bg-emerald-950 text-emerald-300 border border-emerald-700/70 px-1.5 py-0.5 rounded-md font-mono text-[10px]">0 Keys</span>
+          <span id="api-count-badge" class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono text-[11px] px-1.5 py-0.2 rounded-md">0 Keys</span>
         </button>
 
-        <!-- Tombol Login Akun Google OAuth -->
         <div id="google-auth-container">
-          <button type="button" onclick="loginWithGoogleAccount()" class="flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-900 rounded-xl px-3 py-1.5 text-xs font-bold transition shadow-sm">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-3.5 h-3.5">
-            <span>Login Google</span>
+          <button type="button" onclick="window.loginWithGoogleAccount()"
+            class="bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition flex items-center gap-2">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-4 h-4">
+            <span>Login dengan Google</span>
           </button>
         </div>
-
-        <span class="hidden md:inline-block text-[11px] bg-purple-950/70 text-purple-300 border border-purple-800/70 px-2.5 py-1.5 rounded-xl font-mono">0xFlow / Veo Native</span>
       </div>
     </div>
   </header>
 
-  <!-- Multi-API Key Settings Modal -->
-  <div id="api-settings-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <div class="flex items-center gap-2">
-          <i class="fa-solid fa-key text-amber-400"></i>
-          <h3 class="text-sm font-bold text-white">Pengaturan Multi Gemini API Key & Akun Google</h3>
-        </div>
-        <button type="button" onclick="closeApiModal()" class="text-slate-400 hover:text-white text-sm px-2 py-1">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
+  <!-- MAIN WORKSPACE -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-      <p class="text-xs text-slate-400 leading-relaxed">
-        Tambahkan satu atau beberapa <strong>Gemini API Key</strong> sekaligus (pisahkan dengan baris baru / Enter atau koma), atau hubungkan langsung dengan <strong>Akun Google</strong> Anda untuk menggunakan kuota Gemini AI & penyimpanan cloud per akun.
-      </p>
-
-      <div class="space-y-2">
-        <label for="bulk-api-input" class="text-[11px] font-semibold text-slate-300 block">Masukkan API Key (Bisa Banyak Sekaligus):</label>
-        <textarea id="bulk-api-input" rows="4" placeholder="AIzaSy...&#10;AIzaSy...&#10;AIzaSy..." class="w-full rounded-xl p-3 font-mono text-xs text-emerald-300 leading-relaxed resize-y"></textarea>
-        <div class="flex justify-end">
-          <button type="button" onclick="addBulkApiKeys()" class="px-3.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition flex items-center gap-1.5">
-            <i class="fa-solid fa-plus"></i> Tambahkan ke Daftar
-          </button>
-        </div>
-      </div>
-
-      <div class="space-y-2">
-        <div class="flex items-center justify-between">
-          <span class="text-[11px] font-semibold text-slate-300">Daftar API Key Aktif (<span id="modal-key-count">0</span>):</span>
-          <button type="button" onclick="clearAllApiKeys()" class="text-[11px] text-rose-400 hover:text-rose-300 underline">Hapus Semua</button>
-        </div>
-        <div id="api-keys-list" class="max-h-40 overflow-y-auto space-y-1.5 bg-slate-950 border border-slate-800 rounded-xl p-2.5">
-          <p class="text-[11px] text-slate-500 text-center py-3">Belum ada API Key tersimpan.</p>
-        </div>
-      </div>
-
-      <div class="flex justify-end gap-2 pt-2 border-t border-slate-800">
-        <button type="button" onclick="closeApiModal()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition">
-          Selesai & Simpan
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Saved Projects Modal (Per Akun Google) -->
-  <div id="saved-projects-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <div class="flex items-center gap-2">
-          <i class="fa-solid fa-folder-open text-sky-400"></i>
-          <div>
-            <h3 class="text-sm font-bold text-white">Daftar Project Tersimpan</h3>
-            <p id="saved-account-label" class="text-[10px] text-slate-400">Penyimpanan Lokal Browser (Login Google untuk sinkronisasi akun)</p>
-          </div>
-        </div>
-        <button type="button" onclick="closeSavedProjectsModal()" class="text-slate-400 hover:text-white text-sm px-2 py-1">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-
-      <div id="saved-projects-list" class="max-h-80 overflow-y-auto space-y-2.5 bg-slate-950 border border-slate-800 rounded-xl p-3">
-        <p class="text-xs text-slate-500 text-center py-6">Belum ada project cerita yang disimpan.</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Main Content -->
-  <main class="max-w-7xl mx-auto px-4 py-6 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
-    
-    <!-- Left Input Panel -->
-    <section class="lg:col-span-4 space-y-5">
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
-        <div class="flex justify-between items-center mb-3">
-          <h2 class="text-sm font-semibold flex items-center gap-2 text-purple-400">
-            <i class="fa-solid fa-feather-pointed"></i> Naskah Cerita
+      <!-- PANEL KIRI: INPUT NASKAH CERITA & PENGATURAN -->
+      <section class="lg:col-span-4 bg-[#11121c] border border-slate-800/90 rounded-2xl p-5 shadow-xl">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-bold text-purple-300 flex items-center gap-2">
+            <i class="fa-solid fa-feather-pointed text-purple-400"></i>
+            <span>Naskah Cerita</span>
           </h2>
-          <button type="button" id="btn-sample-story" class="text-xs text-purple-400 hover:text-purple-300 underline font-medium flex items-center gap-1">
-            <i class="fa-solid fa-lightbulb"></i> Isi Contoh Cerita
+          <button id="btn-sample-story" type="button"
+            class="text-xs text-purple-400 hover:text-purple-300 underline decoration-purple-500/40 underline-offset-4 flex items-center gap-1 transition">
+            <i class="fa-regular fa-lightbulb"></i> Isi Contoh Cerita
           </button>
         </div>
 
-        <!-- Judul Project & Simpan -->
-        <div class="mb-3">
-          <label for="project-title" class="text-[11px] text-slate-400 block mb-1">Judul Project Cerita:</label>
-          <div class="flex gap-2">
-            <input type="text" id="project-title" placeholder="Contoh: Misteri Sumur Tua..." class="w-full text-xs rounded-xl px-3 py-2 focus:outline-none">
-            <button type="button" onclick="saveCurrentProject()" class="shrink-0 px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition flex items-center gap-1.5" title="Simpan ke Akun Google">
-              <i class="fa-solid fa-cloud-arrow-up"></i> Simpan
+        <!-- Judul Project & Tombol Simpan -->
+        <div class="mb-3.5">
+          <label for="project-title-input" class="block text-xs text-slate-400 mb-1.5">Judul Project Cerita:</label>
+          <div class="flex items-center gap-2">
+            <input id="project-title-input" type="text" placeholder="Contoh: Misteri Sumur Tua..."
+              class="w-full bg-[#0b0c12] border border-slate-800 focus:border-purple-500 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition">
+            <button id="btn-save-project" type="button"
+              class="shrink-0 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-md shadow-sky-600/20 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+              <span>Simpan</span>
             </button>
           </div>
         </div>
 
+        <!-- Rasio Layar & Visual Style -->
         <div class="grid grid-cols-2 gap-2.5 mb-3">
           <div>
-            <label for="aspect-ratio" class="text-[11px] text-slate-400 block mb-1">Rasio Layar:</label>
-            <select id="aspect-ratio" class="w-full text-xs rounded-xl px-2.5 py-2 focus:outline-none">
-              <option value="vertical 9:16" selected>9:16 Vertical</option>
-              <option value="horizontal 16:9">16:9 Horizontal</option>
+            <label for="ratio-select" class="block text-[11px] text-slate-400 mb-1">Rasio Layar:</label>
+            <select id="ratio-select"
+              class="w-full bg-[#0b0c12] border border-slate-800 focus:border-purple-500 rounded-xl px-2.5 py-2 text-xs text-slate-200 focus:outline-none">
+              <option value="9:16 Vertical">9:16 Vertical</option>
+              <option value="16:9 Widescreen">16:9 Widescreen</option>
+              <option value="1:1 Square">1:1 Square</option>
+              <option value="4:5 Portrait">4:5 Portrait</option>
+              <option value="21:9 Cinema Ultrawide">21:9 Cinema Ultrawide</option>
             </select>
           </div>
           <div>
-            <label for="genre-select" class="text-[11px] text-slate-400 block mb-1">Visual Style:</label>
-            <select id="genre-select" class="w-full text-xs rounded-xl px-2.5 py-2 focus:outline-none">
-              <option value="anime-2d" selected>Dark 2D Anime Illustration</option>
-              <option value="stickman">Stickman / Stick Figure (2D Doodle)</option>
-              <option value="folklore-horror">Indonesian Folklore Horror (35mm)</option>
-              <option value="3d-pixar">3D Pixar / Animated Movie Style</option>
-              <option value="claymation">Claymation / Stop-Motion Clay</option>
-              <option value="comic-novel">Comic Book / Graphic Novel</option>
-              <option value="retro-anime">Retro 90s Cel Anime</option>
-              <option value="watercolor">Watercolor Storybook Illustration</option>
-              <option value="paper-cutout">Layered Paper Cutout Art</option>
-              <option value="cyberpunk-noir">Cyberpunk Sci-Fi Noir</option>
-              <option value="cinematic-drama">Realistic Cinematic Drama</option>
-              <option value="low-poly">Stylized Low-Poly 3D</option>
+            <label for="style-select" class="block text-[11px] text-slate-400 mb-1">Visual Style:</label>
+            <select id="style-select"
+              class="w-full bg-[#0b0c12] border border-slate-800 focus:border-purple-500 rounded-xl px-2.5 py-2 text-xs text-slate-200 focus:outline-none">
+              <option value="Dark 2D Anime Illustration, moody lighting, rich linework">Dark 2D Anime Illustration</option>
+              <option value="Cinematic 3D Pixar-Disney Animation Style, expressive lighting, subsurface scattering">3D Pixar / Disney Style</option>
+              <option value="Photorealistic 35mm Cinema Film, dramatic chiaroscuro lighting, shallow depth of field">Cinematic Live Action</option>
+              <option value="dark moody Indonesian folklore horror cinema, 35mm film grain, atmospheric mist">Indonesian Folklore Horror</option>
+              <option value="Studio Ghibli Hand-Painted Watercolor Anime, warm nostalgic atmosphere">Ghibli Watercolor Anime</option>
+              <option value="Cyberpunk Neo-Noir 3D Unreal Engine 5 Render, volumetric neon fog">Cyberpunk Neo-Noir 3D</option>
+              <option value="Epic Historical Period Drama Cinema, natural golden hour lighting, 8k raw">Historical Period Drama</option>
+              <option value="Dark Fantasy Graphic Novel Concept Art, dramatic ink shadows, painterly texture">Dark Fantasy Concept Art</option>
             </select>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
+        <!-- Bahasa & Target Jumlah Scene -->
+        <div class="grid grid-cols-2 gap-2.5 mb-3.5">
           <div>
-            <label for="language-select" class="text-[11px] text-slate-400 block mb-1 font-medium">Bahasa & Aksen Voice-Over:</label>
-            <select id="language-select" class="w-full text-xs rounded-xl px-2.5 py-2 text-sky-300 font-medium focus:outline-none">
-              <option value="auto" selected>Auto (match the language)</option>
-              <option value="Indonesia">Indonesia (Indonesian)</option>
-              <option value="United States">United States (American English)</option>
-              <option value="United Kingdom">United Kingdom (British English)</option>
-              <option value="Philippines">Philippines (Tagalog / Filipino)</option>
-              <option value="Japan">Japan (Japanese)</option>
-              <option value="South Korea">South Korea (Korean)</option>
-              <option value="Thailand">Thailand (Thai)</option>
-              <option value="Vietnam">Vietnam (Vietnamese)</option>
-              <option value="India">India (Hindi / Indian English)</option>
-              <option value="China">China (Mandarin Chinese)</option>
-              <option value="Mexico">Mexico (Mexican Spanish)</option>
-              <option value="Spain">Spain (Castilian Spanish)</option>
-              <option value="Brazil">Brazil (Brazilian Portuguese)</option>
-              <option value="France">France (French)</option>
-              <option value="Germany">Germany (German)</option>
-              <option value="Egypt">Egypt (Egyptian Arabic)</option>
-              <option value="Nigeria">Nigeria (Nigerian English)</option>
-              <option value="Bangladesh">Bangladesh (Bengali)</option>
+            <label for="lang-select" class="block text-[11px] text-slate-400 mb-1">Bahasa &amp; Aksen Voice-Over:</label>
+            <select id="lang-select"
+              class="w-full bg-[#0b0c12] border border-slate-800 focus:border-purple-500 rounded-xl px-2.5 py-2 text-xs text-slate-200 focus:outline-none">
+              <option value="Auto (match the language of the story)">Auto (match the language of the story)</option>
+              <option value="Indonesia (Bahasa Indonesia Natural Cinematic Narration)">Indonesia (Indonesian)</option>
+              <option value="English US (American Dramatic Storytelling Accent)">English (US Narrator)</option>
+              <option value="English UK (British Documentary & Cinematic Accent)">English (UK Narrator)</option>
+              <option value="Jawa (Bahasa Jawa Halus & Mistis)">Jawa (Indonesian Regional)</option>
+              <option value="Sunda (Bahasa Sunda Natural & Ekspresif)">Sunda (Indonesian Regional)</option>
+              <option value="Melayu (Bahasa Melayu Klasik & Sinematik)">Melayu (Malay)</option>
+              <option value="Japanese (Anime Dramatic Voice Acting)">Japanese (Anime)</option>
+              <option value="Korean (K-Drama Emotional Narration)">Korean (K-Drama)</option>
+              <option value="Mandarin Chinese (Cinematic Storytelling)">Mandarin (Chinese)</option>
+              <option value="Arabic (Fusha Dramatic Narration)">Arabic (Fusha)</option>
+              <option value="Spanish (Latin / Castilian Dramatic)">Spanish (Español)</option>
+              <option value="French (Cinematic Parisian Narration)">French (Français)</option>
+              <option value="German (Dramatic Documentary Voice)">German (Deutsch)</option>
+              <option value="Russian (Deep Dramatic Narration)">Russian (Русский)</option>
+              <option value="Hindi (Bollywood Dramatic Storytelling)">Hindi (हिन्दी)</option>
+              <option value="Thai (Dramatic Thai Narration)">Thai (ไทย)</option>
+              <option value="Vietnamese (Natural Storytelling Voice)">Vietnamese (Tiếng Việt)</option>
             </select>
           </div>
           <div>
-            <label for="scene-count-select" class="text-[11px] text-slate-400 block mb-1 font-medium">Target Jumlah Scene:</label>
-            <select id="scene-count-select" class="w-full text-xs rounded-xl px-2.5 py-2 text-purple-300 font-medium focus:outline-none">
-              <option value="auto" selected>Auto (Sesuai Paragraf)</option>
+            <label for="scene-count-select" class="block text-[11px] text-slate-400 mb-1">Target Jumlah Scene:</label>
+            <select id="scene-count-select"
+              class="w-full bg-[#0b0c12] border border-slate-800 focus:border-purple-500 rounded-xl px-2.5 py-2 text-xs text-slate-200 focus:outline-none">
+              <option value="auto">Auto (Sesuai Paragraf)</option>
               <option value="3">3 Scene</option>
               <option value="4">4 Scene</option>
               <option value="5">5 Scene</option>
               <option value="6">6 Scene</option>
               <option value="8">8 Scene</option>
+              <option value="10">10 Scene</option>
+              <option value="12">12 Scene</option>
             </select>
           </div>
         </div>
-        
-        <textarea id="story-input" rows="12" placeholder="Masukkan naskah cerita lengkap di sini..." class="w-full rounded-xl p-3.5 text-slate-200 text-xs leading-relaxed resize-y transition font-sans"></textarea>
-        
-        <div class="mt-3 flex items-center justify-between text-[11px] text-slate-400">
-          <div class="flex gap-3">
+
+        <!-- Textarea Naskah Cerita (Tinggi tetap & terkunci) -->
+        <div class="mb-2.5">
+          <textarea id="story-input" rows="5" placeholder="Masukkan naskah cerita lengkap di sini..."
+            class="w-full h-36 resize-none overflow-y-auto bg-[#0b0c12] border border-slate-800 focus:border-purple-500 rounded-xl p-3.5 text-xs sm:text-sm text-slate-100 placeholder-slate-500 leading-relaxed focus:outline-none transition"></textarea>
+        </div>
+
+        <!-- Statistik Karakter & Indikator Engine -->
+        <div class="flex items-center justify-between text-[11px] text-slate-400 mb-4 px-0.5">
+          <div>
             <span>Karakter: <strong id="char-count" class="text-slate-200">0</strong></span>
-            <span>Kata: <strong id="word-count" class="text-slate-200">0</strong></span>
+            <span class="ml-2.5">Kata: <strong id="word-count" class="text-slate-200">0</strong></span>
           </div>
-          <button type="button" onclick="openApiModal()" id="api-status-indicator" class="text-[10px] text-amber-400 hover:underline flex items-center gap-1">
-            <i class="fa-solid fa-key"></i> Atur API Key
+          <button id="api-status-indicator" type="button" class="text-[10px] text-amber-400 hover:underline flex items-center gap-1">
+            <i class="fa-solid fa-key"></i> Atur API Key (0) / Lokal
           </button>
         </div>
 
-        <button type="button" id="btn-generate" class="w-full mt-4 py-2.5 px-5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-purple-600/30 transition transform active:scale-95 flex items-center justify-center gap-2">
-          <i class="fa-solid fa-wand-magic-sparkles"></i> Generate Reference Assets & Scenes
+        <!-- Tombol Generate Utama -->
+        <button id="btn-generate" type="button"
+          class="w-full bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm py-3 px-4 rounded-xl shadow-lg shadow-purple-600/25 transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>Generate Reference Assets &amp; Scenes</span>
         </button>
-      </div>
-    </section>
+      </section>
 
-    <!-- Right Output Panel (0xFlow AI Story Style) -->
-    <section class="lg:col-span-8 space-y-6">
-      <!-- Empty State -->
-      <div id="empty-state" class="bg-slate-900/50 border border-dashed border-slate-800 rounded-2xl p-14 text-center flex flex-col items-center justify-center gap-4">
-        <div class="w-14 h-14 rounded-full bg-slate-800/80 flex items-center justify-center text-purple-400 text-xl">
-          <i class="fa-solid fa-clapperboard"></i>
-        </div>
-        <div class="max-w-sm">
-          <h3 class="text-sm font-semibold text-slate-200">Belum Ada Reference Assets & Scene</h3>
-          <p class="text-xs text-slate-400 mt-1">Masukkan naskah cerita di panel kiri lalu klik Generate untuk membuat kartu <code class="text-purple-300">asset_001+</code> dan <code class="text-emerald-300">scene_001+</code>.</p>
-        </div>
-      </div>
-
-      <!-- SECTION 1: REFERENCE IMAGES (asset_001, asset_002, asset_003...) -->
-      <div id="assets-wrapper" class="hidden space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
-          <div class="flex items-center gap-2">
-            <span class="bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">Reference Images</span>
-            <h2 class="text-sm font-semibold text-slate-200">Karakter, Lokasi & Properti Cerita</h2>
+      <!-- PANEL KANAN: HASIL REFERENCE ASSETS & SCENES -->
+      <section class="lg:col-span-8">
+        <!-- Empty State -->
+        <div id="empty-state" class="bg-[#11121c] border border-slate-800/90 rounded-2xl p-10 sm:p-14 flex flex-col items-center justify-center text-center min-h-[380px]">
+          <div class="w-14 h-14 rounded-2xl bg-[#191b2b] border border-slate-800 flex items-center justify-center text-purple-400 text-xl mb-4 shadow-inner">
+            <i class="fa-solid fa-clapperboard"></i>
           </div>
-          <span id="assetBadge" class="text-[11px] text-slate-400 font-mono">0 Assets</span>
+          <h3 class="text-base font-bold text-white mb-1.5">Belum Ada Reference Assets &amp; Scene</h3>
+          <p class="text-xs sm:text-sm text-slate-400 max-w-md leading-relaxed">
+            Masukkan naskah cerita di panel kiri lalu klik <strong class="text-slate-200">Generate</strong> untuk membuat kartu
+            <span class="font-mono text-purple-400">asset_001+</span> dan <span class="font-mono text-emerald-400">scene_001+</span>.
+          </p>
         </div>
-        <div id="assetPromptsContainer" class="space-y-4"></div>
-      </div>
 
-      <!-- SECTION 2: ALL SCENE IMAGES & VIDEOS (scene_001, scene_002...) -->
-      <div id="scenes-wrapper" class="hidden space-y-4 pt-2">
-        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
-          <div class="flex items-center gap-2">
-            <span class="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">All Scene Images</span>
-            <h2 class="text-sm font-semibold text-slate-200">Timeline Adegan Tersambung (10-Second Scenes)</h2>
-          </div>
-          <span id="sceneBadge" class="text-[11px] text-slate-400 font-mono">0 Scenes</span>
-        </div>
-        <div id="scenes-container" class="space-y-5"></div>
-      </div>
-    </section>
+        <!-- Hasil Render -->
+        <div id="results-container" class="hidden"></div>
+      </section>
+
+    </div>
   </main>
 
-  <!-- App Script -->
+  <!-- MODAL: API SETTINGS -->
+  <div id="api-settings-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#13141f] border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+      <div class="flex items-center justify-between pb-3.5 border-b border-slate-800 mb-4">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <i class="fa-solid fa-key"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Gemini Multi-API Key Settings</h3>
+            <p class="text-[11px] text-slate-400">Rotasi otomatis jika salah satu API Key mencapai limit kuota</p>
+          </div>
+        </div>
+        <button id="btn-close-api-modal" type="button" class="text-slate-400 hover:text-white text-sm px-2 py-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="bg-[#0b0c12] border border-slate-800/90 rounded-xl p-3.5 mb-4 text-xs space-y-1.5">
+        <p class="font-semibold text-slate-200">Urutan Prioritas AI Otomatis:</p>
+        <div class="flex items-center gap-2 text-emerald-400">
+          <span class="font-mono font-bold">1.</span>
+          <span><strong>Multi-API Key Gemini</strong> (Jika Anda menambahkan API Key di bawah)</span>
+        </div>
+        <div class="flex items-center gap-2 text-sky-400">
+          <span class="font-mono font-bold">2.</span>
+          <span><strong>Akun Google Terhubung</strong> (Otomatis memakai sesi OAuth akun Google Anda)</span>
+        </div>
+        <div class="flex items-center gap-2 text-amber-400">
+          <span class="font-mono font-bold">3.</span>
+          <span><strong>Smart Local Extractor</strong> (Ekstraksi karakter, lokasi &amp; scene otomatis tanpa API)</span>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <div class="flex items-center justify-between mb-1.5">
+          <label for="new-api-key-input" class="text-xs font-medium text-slate-300">Tambah Gemini API Key (1 per baris):</label>
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer"
+            class="text-[11px] text-purple-400 hover:text-purple-300 underline flex items-center gap-1">
+            <span>Ambil Key Gratis</span> <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+          </a>
+        </div>
+        <textarea id="new-api-key-input" rows="3" placeholder="AIzaSy...&#10;AIzaSy..."
+          class="w-full resize-none bg-[#0b0c12] border border-slate-800 focus:border-purple-500 rounded-xl p-3 text-xs text-white font-mono placeholder-slate-600 focus:outline-none mb-2.5"></textarea>
+        <div class="flex items-center justify-between gap-2">
+          <button id="btn-clear-all-keys" type="button"
+            class="text-xs text-rose-400 hover:text-rose-300 px-3 py-2 rounded-xl border border-rose-500/20 bg-rose-500/10 transition">
+            Hapus Semua Key
+          </button>
+          <button id="btn-add-api-key" type="button"
+            class="bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-md shadow-purple-600/20 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-plus"></i> Simpan API Key
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-4 pt-3 border-t border-slate-800">
+        <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Daftar API Key Aktif:</p>
+        <div id="api-keys-list" class="space-y-2 max-h-40 overflow-y-auto"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PROJECT TERSIMPAN -->
+  <div id="saved-projects-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[#13141f] border border-slate-800 rounded-2xl max-w-lg w-full p-5 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-folder-open text-sky-400"></i>
+          <span>Daftar Project Cerita Tersimpan</span>
+        </h3>
+        <button id="btn-close-projects-modal" type="button" class="text-slate-400 hover:text-white text-sm px-2 py-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div id="saved-projects-list" class="space-y-2.5 max-h-80 overflow-y-auto"></div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast-notification" class="hidden fixed bottom-5 right-5 z-50 bg-emerald-600 text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-xl border border-emerald-400/30 flex items-center gap-2 max-w-md">
+    <i class="fa-solid fa-circle-check shrink-0"></i>
+    <span id="toast-message">Notifikasi</span>
+  </div>
+
   <script>
     // =========================================================================
-    // KONFIGURASI KONEKSI GOOGLE OAUTH 2.0 (BUANAMEDIA-STORY-FLOW)
+    // KONFIGURASI GOOGLE OAUTH CLIENT ID (BUANAMEDIA-STORY-FLOW)
     // =========================================================================
     const GOOGLE_CLIENT_ID = "975485898014-1vet8ufltm2m57n57eo727mko296b3bu.apps.googleusercontent.com";
+    // =========================================================================
+
     let googleTokenClient = null;
-    let currentGoogleUser = null;
-    let googleOAuthAccessToken = null;
+    window.currentGoogleProfile = null;
+    window.googleOAuthAccessToken = sessionStorage.getItem('bm_google_oauth_token') || null;
 
-    const SAMPLE_STORY = `Menjelang subuh, Ratna menimba air di sumur batu tua di sudut ruangan rumah adat yang gelap. Tiba-tiba ia melihat bara api rokok menyala di sudut gelap sumur. Ratna terkejut dan berteriak, "Siapa yang merokok di situ? Keluar sekarang, jangan main-main!"
+    window.showToast = function (msg) {
+      const toast = document.getElementById('toast-notification');
+      const toastMsg = document.getElementById('toast-message');
+      if (!toast || !toastMsg) return;
+      toastMsg.textContent = msg;
+      toast.classList.remove('hidden');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 4200);
+    };
 
-Dari balik bayangan gelap di tepi sumur batu, tampak siluet pria tanpa kepala duduk membisu sambil memegang sebatang rokok menyala.
+    window.updateGoogleAuthUI = function (profile) {
+      const container = document.getElementById('google-auth-container');
+      if (!container) return;
 
-Ratna panik dan mundur ketakutan ke arah pintu lengkung sambil memegangi kebayanya, lalu berteriak memanggil suaminya, "Mas Bambang, tolong! Ada orang tanpa kepala di sumur!"
+      if (profile && profile.email) {
+        const avatarHtml = profile.photoURL
+          ? `<img src="${escapeHtml(profile.photoURL)}" alt="Avatar" class="w-5 h-5 rounded-full border border-sky-400/50">`
+          : `<i class="fa-solid fa-circle-user text-sky-400 text-base"></i>`;
 
-Bambang bergegas masuk membawa lampu minyak ke ruang sumur, memeriksa sudut gelap itu dan berkata tegas, "Ada apa, Ratna? Jangan berteriak subuh begini. Lihat ke sumur itu, ada bayangan tanpa kepala!"
-
-Asap rokok tebal masih mengepul di bibir sumur yang kini kosong. Bambang mengendus bau tembakau segar dan berkata cemas, "Hanya abu rokok, tidak ada siapa-siapa di sini. Baunya anyir, Mas! Dia baru saja bergerak! Ayo keluar ke beranda sekarang juga!"
-
-Ratna dan Bambang berlari ke beranda depan rumah dan mendapati pintu depan sudah terbuka lebar ke arah kabut subuh. Ratna bertanya ketakutan, "Mas, pintu depan sudah terbuka dari tadi?"`;
-
-    // State penyimpanan di memori & browser storage yang terikat ke Akun Google
-    let savedApiKeys = [];
-    let latestGeneratedPlan = null;
-
-    function getStorageNamespace() {
-      return currentGoogleUser && currentGoogleUser.sub
-        ? `bm_google_account_${currentGoogleUser.sub}`
-        : 'bm_guest_session';
-    }
-
-    function loadAccountDataFromStorage() {
-      try {
-        const ns = getStorageNamespace();
-        const storedKeys = localStorage.getItem(`${ns}_api_keys`);
-        savedApiKeys = storedKeys ? JSON.parse(storedKeys) : [];
-      } catch (e) {
-        savedApiKeys = [];
+        container.innerHTML = `
+          <div class="flex items-center gap-2 bg-[#151724] border border-sky-500/40 px-3 py-1.5 rounded-xl">
+            ${avatarHtml}
+            <span class="text-xs font-bold text-sky-300 max-w-[120px] truncate">${escapeHtml(profile.displayName || profile.email)}</span>
+            <button type="button" onclick="window.logoutGoogleAccount()" title="Keluar dari Akun Google"
+              class="text-slate-400 hover:text-rose-400 text-xs ml-1 transition">
+              <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <button type="button" onclick="window.loginWithGoogleAccount()"
+            class="bg-white hover:bg-slate-100 text-slate-900 text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm transition flex items-center gap-2">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-4 h-4">
+            <span>Login dengan Google</span>
+          </button>
+        `;
       }
-      updateApiBadges();
-      renderApiKeyList();
-      updateSavedProjectsBadge();
-    }
+    };
 
-    function persistApiKeysToStorage() {
-      try {
-        const ns = getStorageNamespace();
-        localStorage.setItem(`${ns}_api_keys`, JSON.stringify(savedApiKeys));
-      } catch (e) {}
-    }
-
-    function initGoogleOAuth() {
-      if (window.google && window.google.accounts && window.google.accounts.oauth2) {
+    function initGoogleOAuthClient() {
+      if (window.google && window.google.accounts && GOOGLE_CLIENT_ID) {
         googleTokenClient = google.accounts.oauth2.initTokenClient({
           client_id: GOOGLE_CLIENT_ID,
           scope: 'openid email profile https://www.googleapis.com/auth/generative-language.retriever',
           callback: async (tokenResponse) => {
             if (tokenResponse && tokenResponse.access_token) {
-              googleOAuthAccessToken = tokenResponse.access_token;
+              window.googleOAuthAccessToken = tokenResponse.access_token;
+              sessionStorage.setItem('bm_google_oauth_token', tokenResponse.access_token);
               try {
-                const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                  headers: { Authorization: `Bearer ${googleOAuthAccessToken}` }
+                const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                  headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
                 });
-                const profile = await userRes.json();
-                currentGoogleUser = {
-                  sub: profile.sub,
+                const profile = await res.json();
+                window.currentGoogleProfile = {
+                  uid: profile.sub,
                   email: profile.email,
-                  name: profile.name || profile.email,
-                  picture: profile.picture || ''
+                  displayName: profile.name || profile.email,
+                  photoURL: profile.picture || ''
                 };
-                try {
-                  localStorage.setItem('bm_active_google_profile', JSON.stringify(currentGoogleUser));
-                } catch (e) {}
-                updateGoogleAuthUI();
-                loadAccountDataFromStorage();
-                showToast(`Terhubung ke Akun Google: ${currentGoogleUser.name}`);
+                localStorage.setItem('bm_google_user_profile', JSON.stringify(window.currentGoogleProfile));
+                window.updateGoogleAuthUI(window.currentGoogleProfile);
+                if (typeof window.updateApiBadges === 'function') {
+                  window.updateApiBadges();
+                }
+                window.loadUserProjectsFromStorage();
+                window.showToast(`Terhubung ke akun Google: ${window.currentGoogleProfile.displayName}!`);
               } catch (err) {
-                showToast('Berhasil terhubung ke Google OAuth!');
+                window.showToast("Gagal mengambil profil akun Google.");
               }
             }
           }
@@ -376,262 +483,58 @@ Ratna dan Bambang berlari ke beranda depan rumah dan mendapati pintu depan sudah
       }
     }
 
-    function loginWithGoogleAccount() {
-      if (!googleTokenClient) {
-        initGoogleOAuth();
-      }
+    window.loginWithGoogleAccount = function () {
       if (googleTokenClient) {
         googleTokenClient.requestAccessToken();
       } else {
-        showToast('Layanan Google Identity sedang dimuat, silakan klik sekali lagi.');
-      }
-    }
-
-    function logoutGoogleAccount() {
-      currentGoogleUser = null;
-      googleOAuthAccessToken = null;
-      try {
-        localStorage.removeItem('bm_active_google_profile');
-      } catch (e) {}
-      updateGoogleAuthUI();
-      loadAccountDataFromStorage();
-      showToast('Berhasil keluar dari Akun Google.');
-    }
-
-    function updateGoogleAuthUI() {
-      const container = document.getElementById('google-auth-container');
-      const labelEl = document.getElementById('saved-account-label');
-      if (!container) return;
-
-      if (currentGoogleUser && currentGoogleUser.email) {
-        const avatar = currentGoogleUser.picture
-          ? `<img src="${currentGoogleUser.picture}" alt="Avatar" class="w-4 h-4 rounded-full border border-sky-400">`
-          : `<i class="fa-solid fa-circle-user text-sky-400"></i>`;
-
-        container.innerHTML = `
-          <div class="flex items-center gap-2 bg-slate-950 border border-sky-700/70 rounded-xl px-2.5 py-1.5 text-xs">
-            ${avatar}
-            <span class="text-sky-300 font-semibold max-w-[110px] truncate">${escapeHtml(currentGoogleUser.name)}</span>
-            <button type="button" onclick="logoutGoogleAccount()" class="text-slate-400 hover:text-rose-400 ml-1" title="Keluar Akun Google">
-              <i class="fa-solid fa-right-from-bracket"></i>
-            </button>
-          </div>
-        `;
-        if (labelEl) {
-          labelEl.textContent = `Tersimpan pada Akun Google: ${currentGoogleUser.email}`;
-        }
-      } else {
-        container.innerHTML = `
-          <button type="button" onclick="loginWithGoogleAccount()" class="flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-900 rounded-xl px-3 py-1.5 text-xs font-bold transition shadow-sm">
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" class="w-3.5 h-3.5">
-            <span>Login Google</span>
-          </button>
-        `;
-        if (labelEl) {
-          labelEl.textContent = 'Penyimpanan Lokal Browser (Login Google untuk mengikat ke akun Anda)';
+        initGoogleOAuthClient();
+        if (googleTokenClient) {
+          googleTokenClient.requestAccessToken();
+        } else {
+          window.showToast("Layanan Google Login sedang dimuat, silakan klik sekali lagi.");
         }
       }
-      updateApiBadges();
-    }
+    };
+
+    window.logoutGoogleAccount = function () {
+      window.currentGoogleProfile = null;
+      window.googleOAuthAccessToken = null;
+      localStorage.removeItem('bm_google_user_profile');
+      sessionStorage.removeItem('bm_google_oauth_token');
+      window.updateGoogleAuthUI(null);
+      if (typeof window.updateApiBadges === 'function') {
+        window.updateApiBadges();
+      }
+      window.loadUserProjectsFromStorage();
+      window.showToast("Berhasil keluar dari akun Google.");
+    };
+
+    try {
+      const cachedProfile = JSON.parse(localStorage.getItem('bm_google_user_profile') || 'null');
+      if (cachedProfile && cachedProfile.uid) {
+        window.currentGoogleProfile = cachedProfile;
+        window.updateGoogleAuthUI(cachedProfile);
+      }
+    } catch (e) {}
+
+    window.addEventListener('load', () => {
+      initGoogleOAuthClient();
+    });
 
     // =========================================================================
-    // PENYIMPANAN PROJECT CERITA (TERIKAT PER AKUN GOOGLE)
+    // 3-TIER AI ENGINE (MULTI API KEY -> GOOGLE OAUTH AI -> SMART LOCAL EXTRACTOR)
     // =========================================================================
-    function getSavedProjects() {
-      try {
-        const ns = getStorageNamespace();
-        return JSON.parse(localStorage.getItem(`${ns}_projects`) || '[]');
-      } catch (e) {
-        return [];
-      }
-    }
-
-    function setSavedProjects(list) {
-      try {
-        const ns = getStorageNamespace();
-        localStorage.setItem(`${ns}_projects`, JSON.stringify(list));
-      } catch (e) {}
-      updateSavedProjectsBadge();
-    }
-
-    function updateSavedProjectsBadge() {
-      const badge = document.getElementById('saved-projects-badge');
-      if (badge) badge.textContent = String(getSavedProjects().length);
-    }
-
-    function saveCurrentProject() {
-      const storyText = storyInput.value.trim();
-      const titleInput = document.getElementById('project-title');
-      const title = (titleInput.value.trim()) || (storyText ? storyText.split(/\s+/).slice(0, 4).join(' ') : 'Project Tanpa Judul');
-
-      if (!storyText && !latestGeneratedPlan) {
-        showToast('Masukkan naskah cerita terlebih dahulu sebelum menyimpan.');
-        return;
-      }
-
-      const projects = getSavedProjects();
-      const newProject = {
-        id: `proj_${Date.now()}`,
-        title,
-        story: storyText,
-        ratio: aspectRatioSelect.value,
-        genre: genreSelect.value,
-        language: languageSelect.value,
-        sceneCount: sceneCountSelect.value,
-        plan: latestGeneratedPlan,
-        savedAt: new Date().toLocaleString('id-ID')
-      };
-
-      projects.unshift(newProject);
-      setSavedProjects(projects);
-      showToast(`Project "${title}" berhasil disimpan${currentGoogleUser ? ' ke Akun Google Anda' : ''}!`);
-    }
-
-    function openSavedProjectsModal() {
-      renderSavedProjectsList();
-      document.getElementById('saved-projects-modal').classList.remove('hidden');
-    }
-
-    function closeSavedProjectsModal() {
-      document.getElementById('saved-projects-modal').classList.add('hidden');
-    }
-
-    function renderSavedProjectsList() {
-      const listEl = document.getElementById('saved-projects-list');
-      const projects = getSavedProjects();
-      if (!listEl) return;
-
-      if (projects.length === 0) {
-        listEl.innerHTML = `<p class="text-xs text-slate-500 text-center py-6">Belum ada project cerita yang disimpan pada akun ini.</p>`;
-        return;
-      }
-
-      listEl.innerHTML = projects.map((p, idx) => `
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h4 class="text-xs font-bold text-white">${escapeHtml(p.title)}</h4>
-            <p class="text-[10px] text-slate-400 mt-0.5">${escapeHtml(p.savedAt)} &bull; ${escapeHtml(p.ratio)}</p>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <button type="button" onclick="loadProjectFromStorage(${idx})" class="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-semibold transition">
-              Buka
-            </button>
-            <button type="button" onclick="deleteProjectFromStorage(${idx})" class="px-2 py-1 rounded-lg bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800/70 text-[11px] transition">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function loadProjectFromStorage(idx) {
-      const projects = getSavedProjects();
-      const proj = projects[idx];
-      if (!proj) return;
-
-      document.getElementById('project-title').value = proj.title || '';
-      storyInput.value = proj.story || '';
-      storyInput.dispatchEvent(new Event('input'));
-      if (proj.ratio) aspectRatioSelect.value = proj.ratio;
-      if (proj.genre) genreSelect.value = proj.genre;
-      if (proj.language) languageSelect.value = proj.language;
-      if (proj.sceneCount) sceneCountSelect.value = proj.sceneCount;
-
-      if (proj.plan && proj.plan.assets && proj.plan.scenes) {
-        latestGeneratedPlan = proj.plan;
-        const langSpec = getLanguageSpec(languageSelect.value, proj.story || '');
-        const stylePrefix = getStylePrefix(genreSelect.value);
-        emptyState.classList.add('hidden');
-        const allAssets = renderReferenceAssetsFromAI(proj.plan.assets, stylePrefix, aspectRatioSelect.value);
-        renderScenesFromAI(proj.plan.scenes, allAssets, stylePrefix, aspectRatioSelect.value, langSpec);
-      }
-
-      closeSavedProjectsModal();
-      showToast(`Project "${proj.title}" dimuat!`);
-    }
-
-    function deleteProjectFromStorage(idx) {
-      const projects = getSavedProjects();
-      projects.splice(idx, 1);
-      setSavedProjects(projects);
-      renderSavedProjectsList();
-      showToast('Project dihapus.');
-    }
-
-    // DOM Elements
-    const storyInput = document.getElementById('story-input');
-    const charCount = document.getElementById('char-count');
-    const wordCount = document.getElementById('word-count');
-    const btnGenerate = document.getElementById('btn-generate');
-    const btnSample = document.getElementById('btn-sample-story');
-    const emptyState = document.getElementById('empty-state');
-    const assetsWrapper = document.getElementById('assets-wrapper');
-    const scenesWrapper = document.getElementById('scenes-wrapper');
-    const scenesContainer = document.getElementById('scenes-container');
-    const aspectRatioSelect = document.getElementById('aspect-ratio');
-    const genreSelect = document.getElementById('genre-select');
-    const languageSelect = document.getElementById('language-select');
-    const sceneCountSelect = document.getElementById('scene-count-select');
-
-    function openApiModal() {
-      renderApiKeyList();
-      document.getElementById('api-settings-modal').classList.remove('hidden');
-    }
-
-    function closeApiModal() {
-      const pendingRaw = document.getElementById('bulk-api-input').value.trim();
-      if (pendingRaw) {
-        addBulkApiKeys();
-      }
-      document.getElementById('api-settings-modal').classList.add('hidden');
-    }
-
-    function addBulkApiKeys() {
-      const textarea = document.getElementById('bulk-api-input');
-      const raw = textarea.value.trim();
-      if (!raw) {
-        showToast('Masukkan minimal satu API Key.');
-        return;
-      }
-      const parsed = raw.split(/[\n,;]+/).map(k => k.trim()).filter(Boolean);
-      let addedCount = 0;
-      parsed.forEach(k => {
-        if (!savedApiKeys.includes(k)) {
-          savedApiKeys.push(k);
-          addedCount++;
-        }
-      });
-      textarea.value = '';
-      persistApiKeysToStorage();
-      renderApiKeyList();
-      updateApiBadges();
-      showToast(`${addedCount} API Key berhasil ditambahkan!`);
-    }
-
-    function removeApiKey(index) {
-      savedApiKeys.splice(index, 1);
-      persistApiKeysToStorage();
-      renderApiKeyList();
-      updateApiBadges();
-    }
-
-    function clearAllApiKeys() {
-      savedApiKeys = [];
-      persistApiKeysToStorage();
-      renderApiKeyList();
-      updateApiBadges();
-      showToast('Semua API Key dihapus.');
-    }
-
     function updateApiBadges() {
       const badge = document.getElementById('api-count-badge');
       const indicator = document.getElementById('api-status-indicator');
       const count = savedApiKeys.length;
+      const hasGoogleAccount = Boolean(window.googleOAuthAccessToken || (window.currentGoogleProfile && window.currentGoogleProfile.uid));
+
       if (badge) {
         if (count > 0) {
           badge.textContent = `${count} ${count === 1 ? 'Key' : 'Keys'}`;
-        } else if (googleOAuthAccessToken) {
-          badge.textContent = `Google OAuth`;
+        } else if (hasGoogleAccount) {
+          badge.textContent = `Google AI`;
         } else {
           badge.textContent = `0 Keys`;
         }
@@ -640,161 +543,20 @@ Ratna dan Bambang berlari ke beranda depan rumah dan mendapati pintu depan sudah
         if (count > 0) {
           indicator.className = 'text-[10px] text-emerald-400 hover:underline flex items-center gap-1';
           indicator.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${count} Gemini API Key Aktif`;
-        } else if (googleOAuthAccessToken) {
+        } else if (hasGoogleAccount) {
           indicator.className = 'text-[10px] text-sky-400 hover:underline flex items-center gap-1';
           indicator.innerHTML = `<i class="fa-brands fa-google"></i> Terhubung Akun Google AI`;
         } else {
           indicator.className = 'text-[10px] text-amber-400 hover:underline flex items-center gap-1';
-          indicator.innerHTML = `<i class="fa-solid fa-key"></i> Atur API Key (${count})`;
+          indicator.innerHTML = `<i class="fa-solid fa-key"></i> Atur API Key (0) / Lokal`;
         }
       }
     }
-
-    function renderApiKeyList() {
-      const listEl = document.getElementById('api-keys-list');
-      const countEl = document.getElementById('modal-key-count');
-      if (countEl) countEl.textContent = savedApiKeys.length;
-      if (!listEl) return;
-
-      if (savedApiKeys.length === 0) {
-        listEl.innerHTML = `<p class="text-[11px] text-slate-500 text-center py-3">Belum ada API Key tersimpan. Masukkan di kolom atas atau login Google.</p>`;
-        return;
-      }
-
-      listEl.innerHTML = savedApiKeys.map((k, idx) => {
-        const masked = k.length > 10 ? `${k.slice(0, 6)}••••••••${k.slice(-4)}` : '••••••••';
-        return `
-          <div class="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs">
-            <div class="flex items-center gap-2">
-              <span class="text-[10px] font-mono bg-purple-950 text-purple-300 border border-purple-800/70 px-1.5 py-0.5 rounded">#${idx + 1}</span>
-              <span class="font-mono text-emerald-300 text-[11px]">${masked}</span>
-              ${idx === 0 ? '<span class="text-[9px] bg-emerald-950 text-emerald-400 px-1.5 py-0.5 rounded">PRIMARY</span>' : ''}
-            </div>
-            <button type="button" onclick="removeApiKey(${idx})" class="text-slate-400 hover:text-rose-400 text-xs px-1" title="Hapus Key">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
-          </div>
-        `;
-      }).join('');
-    }
-
-    // Pulihkan sesi akun Google & data tersimpan saat halaman dibuka
-    try {
-      const cachedUser = JSON.parse(localStorage.getItem('bm_active_google_profile') || 'null');
-      if (cachedUser && cachedUser.sub) {
-        currentGoogleUser = cachedUser;
-      }
-    } catch (e) {}
-    updateGoogleAuthUI();
-    loadAccountDataFromStorage();
-
-    window.addEventListener('load', () => {
-      initGoogleOAuth();
-    });
-
-    storyInput.addEventListener('input', () => {
-      const val = storyInput.value;
-      charCount.textContent = val.length;
-      wordCount.textContent = val.trim() ? val.trim().split(/\s+/).length : 0;
-    });
-
-    btnSample.addEventListener('click', () => {
-      const titleInput = document.getElementById('project-title');
-      if (titleInput && !titleInput.value.trim()) {
-        titleInput.value = 'Misteri Sumur Batu Subuh';
-      }
-      storyInput.value = SAMPLE_STORY;
-      storyInput.dispatchEvent(new Event('input'));
-    });
-
-    btnGenerate.addEventListener('click', async () => {
-      const text = storyInput.value.trim();
-      if (!text) {
-        showToast('Silakan masukkan naskah cerita terlebih dahulu!');
-        return;
-      }
-
-      const genre = genreSelect.value;
-      const ratio = aspectRatioSelect.value;
-      const selectedLang = languageSelect.value;
-      const targetSceneCount = sceneCountSelect.value;
-      const langSpec = getLanguageSpec(selectedLang, text);
-      const stylePrefix = getStylePrefix(genre);
-
-      const originalBtnHtml = btnGenerate.innerHTML;
-      btnGenerate.disabled = true;
-      btnGenerate.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Menganalisis cerita & menyusun prompt...`;
-
-      try {
-        const aiResult = await analyzeStoryWithGeminiMultiKey(text, stylePrefix, ratio, langSpec, targetSceneCount, savedApiKeys);
-        const normalized = ensurePropsMappedInScenes(aiResult);
-        latestGeneratedPlan = normalized;
-        emptyState.classList.add('hidden');
-
-        const allAssets = renderReferenceAssetsFromAI(normalized.assets, stylePrefix, ratio);
-        renderScenesFromAI(normalized.scenes, allAssets, stylePrefix, ratio, langSpec);
-        showToast(savedApiKeys.length > 0 ? 'Berhasil di-generate menggunakan Gemini API!' : 'Berhasil di-generate via Koneksi Google AI!');
-      } catch (err) {
-        const fallbackResult = analyzeStoryLocallySmart(text, stylePrefix, ratio, langSpec, targetSceneCount);
-        const normalized = ensurePropsMappedInScenes(fallbackResult);
-        latestGeneratedPlan = normalized;
-        emptyState.classList.add('hidden');
-
-        const allAssets = renderReferenceAssetsFromAI(normalized.assets, stylePrefix, ratio);
-        renderScenesFromAI(normalized.scenes, allAssets, stylePrefix, ratio, langSpec);
-        showToast('Berhasil di-generate (Smart Local Engine)!');
-      } finally {
-        btnGenerate.disabled = false;
-        btnGenerate.innerHTML = originalBtnHtml;
-      }
-    });
-
-    function ensurePropsMappedInScenes(result) {
-      if (!result || !Array.isArray(result.assets) || !Array.isArray(result.scenes)) return result;
-
-      result.assets.forEach((a, idx) => {
-        if (!a.id) a.id = `asset_${String(idx + 1).padStart(3, '0')}`;
-      });
-
-      const propAssets = result.assets.filter(a => a.type && a.type.toLowerCase() === 'prop');
-
-      result.scenes.forEach((scene, sIdx) => {
-        if (!Array.isArray(scene.usedAssetIds)) scene.usedAssetIds = [];
-        const combinedSceneText = `${scene.narrationAndDialogue || ''} ${scene.caption || ''} ${scene.imagePrompt || ''}`.toLowerCase();
-
-        propAssets.forEach(prop => {
-          const propKeywords = prop.name.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-          const isMatched = propKeywords.some(kw => combinedSceneText.includes(kw));
-          if ((isMatched || propAssets.length <= 2) && !scene.usedAssetIds.includes(prop.id)) {
-            scene.usedAssetIds.push(prop.id);
-          }
-        });
-
-        if (propAssets.length > 0 && !scene.usedAssetIds.some(id => propAssets.some(p => p.id === id))) {
-          const fallbackProp = propAssets[sIdx % propAssets.length];
-          scene.usedAssetIds.push(fallbackProp.id);
-        }
-
-        const activePropsInScene = propAssets.filter(p => scene.usedAssetIds.includes(p.id));
-        if (activePropsInScene.length > 0) {
-          const propPromptNote = activePropsInScene.map(p => `${p.id} (${p.name}: ${p.visualDescription})`).join('; ');
-          if (scene.imagePrompt && !scene.imagePrompt.includes(activePropsInScene[0].id)) {
-            scene.imagePrompt += ` Include key props: ${propPromptNote}.`;
-          }
-          if (scene.videoPrompt && !scene.videoPrompt.includes(activePropsInScene[0].id)) {
-            scene.videoPrompt += `\nKEY PROPS LOCKED IN SCENE — ${propPromptNote}.`;
-          }
-        }
-      });
-
-      return result;
-    }
+    window.updateApiBadges = updateApiBadges;
 
     async function analyzeStoryWithGeminiMultiKey(storyText, stylePrefix, ratio, langSpec, targetSceneCount, keysList) {
-      let lastError = null;
-
-      // 1. Coba daftar Gemini API Key manual jika tersedia
       if (keysList && keysList.length > 0) {
+        let lastError = null;
         for (let i = 0; i < keysList.length; i++) {
           try {
             return await callGeminiSingleKey(storyText, stylePrefix, ratio, langSpec, targetSceneCount, keysList[i], null);
@@ -802,95 +564,67 @@ Ratna dan Bambang berlari ke beranda depan rumah dan mendapati pintu depan sudah
             lastError = err;
           }
         }
+        if (window.googleOAuthAccessToken) {
+          return await callGeminiSingleKey(storyText, stylePrefix, ratio, langSpec, targetSceneCount, '', window.googleOAuthAccessToken);
+        }
+        throw lastError || new Error('All API keys failed');
       }
 
-      // 2. Coba koneksi OAuth Akun Google jika user sudah login Google
-      if (googleOAuthAccessToken) {
-        return await callGeminiSingleKey(storyText, stylePrefix, ratio, langSpec, targetSceneCount, '', googleOAuthAccessToken);
+      if (window.googleOAuthAccessToken) {
+        return await callGeminiSingleKey(storyText, stylePrefix, ratio, langSpec, targetSceneCount, '', window.googleOAuthAccessToken);
       }
 
-      throw lastError || new Error('No API key or Google OAuth token available');
+      throw new Error('LOCAL_FALLBACK');
     }
 
     async function callGeminiSingleKey(storyText, stylePrefix, ratio, langSpec, targetSceneCount, apiKey, oauthToken = null) {
-      const baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent`;
+      const baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
       const apiUrl = oauthToken ? baseUrl : `${baseUrl}?key=${encodeURIComponent(apiKey)}`;
 
       const sceneCountInstruction = targetSceneCount === 'auto'
-        ? 'Divide the story naturally into logical sequential scenes (between 3 to 6 scenes).'
-        : `Divide the story into EXACTLY ${targetSceneCount} sequential scenes that flow continuously from beginning to end.`;
+        ? 'Divide the story naturally into 3 to 8 continuous scenes based on narrative beats.'
+        : `Divide the story into exactly ${targetSceneCount} continuous scenes.`;
 
-      const promptText = `You are an expert AI Film Director, Storyboard Artist, and Google Flow / Veo Prompt Engineer.
-Analyze the user's story carefully and extract clean, natural, sensible assets and sequential 10-second video scenes.
+      const systemInstruction = `You are an expert AI Film Director & Visual Prompt Architect for Google Flow / Veo / Imagen.
+Extract EVERY named Character, key Location, and important Prop from the user's story as Reference Assets (asset_001, asset_002, ...), and build Continuous Scenes (scene_001, scene_002, ...).
+- Visual Style Prefix: "${stylePrefix}"
+- Aspect Ratio: "${ratio}"
+- Voice-Over Language & Accent: "${langSpec}"
+- ${sceneCountInstruction}
 
-CRITICAL RULES FOR ASSETS:
-1. Extract ONLY real characters, real locations, and key objects/props actually mentioned or implied in the story.
-2. Give each asset a clean, sensible, human-readable name (e.g., "Ratna", "Bambang", "Sosok Tanpa Kepala", "Sumur Batu Tua", "Beranda Rumah Adat", "Lampu Minyak Tua").
-3. Categorize each asset strictly as "Character", "Location", or "Prop".
-4. For "Character" assets: write detailed physical appearance & outfit in English suitable for a two-view reference sheet (portrait close-up + full-body standing pose on plain neutral light-gray background). Also provide voice description in ${langSpec.langName} (${langSpec.accent} accent).
-5. For "Location" assets: write rich environment description in English (foreground, midground, background, lighting, NO characters).
-6. For "Prop" assets: write isolated object description in English on plain neutral light-gray background.
-
-CRITICAL RULES FOR SCENES:
-1. ${sceneCountInstruction}
-2. Every scene must connect seamlessly as one continuous story from scene 1 to the final scene.
-3. For each scene, list ALL exact asset IDs ("asset_001", "asset_002", etc.)—including Characters, Locations, AND Props—present in that scene inside usedAssetIds.
-4. Provide natural narration and character dialogues in ${langSpec.langName} matching the story plot.
-5. Write a cohesive Start Frame image prompt in English referencing the active characters, location, AND props, using visual style (${stylePrefix}), aspect ratio ${ratio}.
-6. Write a complete 10-second Google Flow / Veo All-In-One video prompt in English with exact timestamps ([00:00-00:03], [00:03-00:07], [00:07-00:10]), synchronized ${langSpec.langName} voice-over narration & lip-sync dialogues, camera angles, character screen sides (camera LEFT / camera RIGHT), active props, SFX, EXCLUDE rules, and SAFETY rules.
-
-Visual Style: ${stylePrefix}
-Aspect Ratio: ${ratio}
-Target Spoken Language & Accent: ${langSpec.langName} (${langSpec.accent})
-
-Story Text:
-${storyText}`;
+Return ONLY valid JSON with this exact schema (no markdown fences):
+{
+  "assets": [
+    {
+      "id": "asset_001",
+      "type": "CHARACTER | LOCATION | PROP",
+      "name": "Exact Character / Location / Prop Name from Story",
+      "image_prompt": "Detailed English image generation prompt starting with Visual Style Prefix and Aspect Ratio. For CHARACTER, describe physical traits, outfit, age, and two views in one clean reference card (left portrait close-up, right full-body standing pose on plain neutral light-gray studio background, no text)."
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene_001",
+      "title": "Short Scene Title",
+      "references": ["asset_001", "asset_002"],
+      "image_prompt": "Detailed English start-frame keyframe image prompt combining referenced asset IDs & names, composition, and lighting in requested Visual Style Prefix and Aspect Ratio.",
+      "video_prompt": "Detailed English cinematic video motion prompt referencing asset IDs & names, camera movement, lighting, and action.",
+      "dialogue": "Narration or dialogue in requested language",
+      "voice_over": "Voice direction + narration"
+    }
+  ]
+}`;
 
       const payload = {
-        contents: [{
-          role: "user",
-          parts: [{ text: promptText }]
-        }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "OBJECT",
-            properties: {
-              assets: {
-                type: "ARRAY",
-                items: {
-                  type: "OBJECT",
-                  properties: {
-                    id: { type: "STRING" },
-                    type: { type: "STRING" },
-                    name: { type: "STRING" },
-                    visualDescription: { type: "STRING" },
-                    voiceProfile: { type: "STRING" }
-                  },
-                  required: ["id", "type", "name", "visualDescription"]
-                }
-              },
-              scenes: {
-                type: "ARRAY",
-                items: {
-                  type: "OBJECT",
-                  properties: {
-                    sceneId: { type: "STRING" },
-                    usedAssetIds: {
-                      type: "ARRAY",
-                      items: { type: "STRING" }
-                    },
-                    narrationAndDialogue: { type: "STRING" },
-                    caption: { type: "STRING" },
-                    imagePrompt: { type: "STRING" },
-                    videoPrompt: { type: "STRING" }
-                  },
-                  required: ["sceneId", "usedAssetIds", "narrationAndDialogue", "caption", "imagePrompt", "videoPrompt"]
-                }
-              }
-            },
-            required: ["assets", "scenes"]
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: `${systemInstruction}\n\nSTORY SCRIPT:\n${storyText}` }]
           }
+        ],
+        generationConfig: {
+          temperature: 0.7,
+          responseMimeType: 'application/json'
         }
       };
 
@@ -904,451 +638,347 @@ ${storyText}`;
         headers,
         body: JSON.stringify(payload)
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      if (!response.ok) {
+        let errDetail = `HTTP ${response.status}`;
+        try {
+          const errJson = await response.json();
+          if (errJson.error && errJson.error.message) {
+            errDetail = errJson.error.message;
+          }
+        } catch (e) {}
+        throw new Error(errDetail);
+      }
+
       const data = await response.json();
-      let rawJson = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!rawJson) throw new Error('Empty response');
-      rawJson = rawJson.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
-      return JSON.parse(rawJson);
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const cleanJson = rawText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+      const parsed = JSON.parse(cleanJson);
+      if (!parsed.assets || !parsed.scenes) throw new Error('Invalid JSON structure from Gemini');
+      return parsed;
     }
 
-    function analyzeStoryLocallySmart(storyText, stylePrefix, ratio, langSpec, targetSceneCount) {
+    // =========================================================================
+    // SMART LOCAL EXTRACTOR
+    // =========================================================================
+    function extractStoryEntitiesLocally(storyText) {
       const stopWords = new Set([
-        'menjelang', 'subuh', 'tiba', 'dari', 'balik', 'tampak', 'panik', 'dan', 'lalu', 'berteriak',
-        'memanggil', 'bergegas', 'masuk', 'membawa', 'memeriksa', 'berkata', 'asap', 'rokok', 'tebal',
-        'masih', 'mengepul', 'mengendus', 'bau', 'hanya', 'abu', 'tidak', 'ada', 'siapa', 'berlari',
-        'mendapati', 'pintu', 'depan', 'sudah', 'terbuka', 'bertanya', 'ketakutan', 'di', 'ke', 'yang',
-        'ini', 'itu', 'dengan', 'pada', 'dalam', 'untuk', 'saat', 'ketika', 'sebuah', 'seorang', 'sang',
-        'the', 'in', 'on', 'at', 'from', 'suddenly', 'then', 'when', 'while', 'as', 'there', 'here',
-        'mas', 'mbak', 'pak', 'bu', 'bang', 'kak', 'dek', 'lihat', 'ayo', 'jangan', 'keluar', 'tolong',
-        'cinematic', 'indonesian', 'dark', 'horror', 'drama', 'scene', 'story'
+        'Di', 'Ke', 'Dari', 'Pada', 'Dalam', 'Dan', 'Yang', 'Untuk', 'Dengan', 'Saat', 'Ketika',
+        'Lalu', 'Kemudian', 'Maka', 'Namun', 'Tetapi', 'Karena', 'Jika', 'Bila', 'Setelah', 'Sebelum',
+        'Itu', 'Ini', 'Mereka', 'Dia', 'Ia', 'Kami', 'Kita', 'Saya', 'Aku', 'Anda', 'Sang', 'Si',
+        'Suatu', 'Sebuah', 'Seorang', 'Para', 'Semua', 'Setiap', 'Tidak', 'Bukan', 'Sudah', 'Telah',
+        'Akan', 'Sedang', 'Masih', 'Sangat', 'Terlalu', 'Hanya', 'Juga', 'Pun', 'Lagi', 'Kembali',
+        'Misteri', 'Legenda', 'Kisah', 'Cerita', 'Tragedi', 'Rahasia', 'Kutukan', 'Bayangan', 'Malam',
+        'Hari', 'Pagi', 'Siang', 'Sore', 'Senja', 'Tengah', 'Ujung', 'Tepi', 'Atas', 'Bawah',
+        'The', 'And', 'But', 'When', 'While', 'After', 'Before', 'Into', 'From', 'With', 'There', 'Once'
       ]);
 
-      const charMap = new Map();
-      const sentences = storyText.split(/(?<=[.!?])\s+/);
-
-      sentences.forEach(s => {
-        const greetingMatches = s.matchAll(/\b(?:Mas|Mbak|Pak|Bu|Bang|Kak)\s+([A-Z][a-z]{2,15})\b/g);
-        for (const m of greetingMatches) {
-          const name = m[1];
-          if (!stopWords.has(name.toLowerCase())) charMap.set(name, true);
-        }
-
-        const words = s.replace(/["'“”‘’.,!?;:()]/g, '').split(/\s+/);
-        words.forEach((w, i) => {
-          if (i > 0 && /^[A-Z][a-z]{2,14}$/.test(w) && !stopWords.has(w.toLowerCase())) {
-            charMap.set(w, true);
+      const nameCounts = {};
+      const sentences = storyText.split(/[.!?\n]+/);
+      sentences.forEach((sentence) => {
+        const tokens = sentence.trim().split(/\s+/);
+        tokens.forEach((rawToken, idx) => {
+          const cleanToken = rawToken.replace(/^[^A-Za-zÀ-ÿ]+|[^A-Za-zÀ-ÿ]+$/g, '');
+          if (cleanToken.length >= 3 && /^[A-Z][a-z]+$/.test(cleanToken) && !stopWords.has(cleanToken)) {
+            const weight = idx > 0 ? 2 : 1;
+            nameCounts[cleanToken] = (nameCounts[cleanToken] || 0) + weight;
           }
         });
       });
 
-      if (/tanpa kepala|headless/i.test(storyText)) {
-        charMap.set('Sosok Tanpa Kepala', true);
-      }
+      const locationKeywords = ['danau', 'hutan', 'desa', 'rumah', 'sumur', 'gunung', 'pantai', 'istana', 'kerajaan', 'gua', 'kuil', 'candi', 'kota', 'jalan', 'dermaga', 'sekolah', 'kamar', 'pasar', 'sungai', 'laut', 'lembah', 'kastil', 'forest', 'village', 'lake', 'house', 'temple', 'castle', 'city'];
+      const propKeywords = ['lentera', 'keris', 'pedang', 'cincin', 'kalung', 'buku', 'kitab', 'surat', 'kunci', 'perahu', 'topeng', 'cermin', 'peti', 'tongkat', 'jimat', 'mahkota', 'boneka', 'lukisan', 'lantern', 'sword', 'ring', 'book', 'key', 'boat', 'mask', 'mirror'];
 
-      const detectedCharNames = Array.from(charMap.keys()).slice(0, 4);
-      if (detectedCharNames.length === 0) {
-        detectedCharNames.push('Tokoh Utama', 'Tokoh Pendamping');
-      }
+      const lowerText = storyText.toLowerCase();
+      const detectedLocations = locationKeywords.filter(kw => lowerText.includes(kw));
+      const detectedProps = propKeywords.filter(kw => lowerText.includes(kw));
 
+      const characterNames = Object.entries(nameCounts)
+        .filter(([name]) => {
+          const pattern = new RegExp(`(?:danau|gunung|desa|kota|kerajaan|sungai|pulau|bukit|lembah)\\s+${name}`, 'i');
+          return !pattern.test(storyText);
+        })
+        .sort((a, b) => b[1] - a[1])
+        .map(([name]) => name)
+        .slice(0, 3);
+
+      const namedLocationMatch = storyText.match(/\b(Danau|Gunung|Desa|Kota|Kerajaan|Hutan|Sumur|Candi|Kuil|Rumah|Dermaga|Pulau)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/);
+      const primaryLocationName = namedLocationMatch
+        ? `${namedLocationMatch[1]} ${namedLocationMatch[2]}`
+        : detectedLocations.length > 0
+          ? detectedLocations[0].charAt(0).toUpperCase() + detectedLocations[0].slice(1) + ' Misterius'
+          : 'Latar Utama Cerita';
+
+      const primaryPropName = detectedProps.length > 0
+        ? detectedProps[0].charAt(0).toUpperCase() + detectedProps[0].slice(1) + ' Kuno'
+        : null;
+
+      return {
+        characters: characterNames.length > 0 ? characterNames : ['Tokoh Utama'],
+        location: primaryLocationName,
+        prop: primaryPropName
+      };
+    }
+
+    function buildLocalStoryPlan(storyText, stylePrefix, ratio, langSpec, targetSceneCount) {
+      const cleanText = storyText.replace(/\s+/g, ' ').trim();
+      const entities = extractStoryEntitiesLocally(storyText);
       const assets = [];
-      let assetIdx = 1;
+      let assetCounter = 1;
 
-      detectedCharNames.forEach((name) => {
-        const isHeadless = /tanpa kepala|headless/i.test(name);
-        const isFemale = /(ratna|dewi|siti|ayu|sri|putri|naya|ani|rina|maya|laras|tari|wulan|fitri|indah|nur)/i.test(name);
-        let desc = '';
-        let voice = '';
-
-        if (isHeadless) {
-          desc = 'eerie headless male silhouette figure wearing dark traditional Javanese shirt and dark sarong, slumped posture, mysterious shadowy aura';
-          voice = 'Silent eerie presence, no spoken words';
-        } else if (isFemale) {
-          desc = `adult ${langSpec.accent} woman in her late 20s, oval face, expressive dark eyes, neat low hair bun, wearing traditional vintage moss-green floral kebaya blouse and dark batik sarong wrap skirt`;
-          voice = `Clear, expressive ${langSpec.accent} female voice in her late 20s`;
-        } else {
-          desc = `adult ${langSpec.accent} man in his mid-30s, square jaw, alert dark eyes, side-parted wavy black hair, wearing vintage collarless beige button-up shirt and dark woven sarong`;
-          voice = `Deep, grounded ${langSpec.accent} male voice in his mid-30s`;
-        }
-
-        assets.push({
-          id: `asset_${String(assetIdx++).padStart(3, '0')}`,
-          type: 'Character',
-          name,
-          visualDescription: desc,
-          voiceProfile: voice
-        });
-      });
-
-      const locationRules = [
-        { regex: /sumur|well/i, name: 'Ruang Sumur Batu Tua', desc: 'foreground stone floor, midground circular mossy stone well with wooden bucket and hemp rope, damp brick walls and an open arched doorway leading to the hallway, lit by a single flickering hanging kerosene oil lamp casting deep shadows' },
-        { regex: /beranda|teras|porch|pintu depan/i, name: 'Beranda Depan & Pintu Kayu Tua', desc: 'foreground tiled porch veranda, midground wooden railing and porch steps leading down to mist-covered yard, background tall vintage shuttered wooden entrance door standing ajar, lit by dim hanging porch lantern' },
-        { regex: /kamar|bedroom|ruang tidur/i, name: 'Kamar Tidur Klasik', desc: 'vintage wooden four-poster bed with mosquito net, antique wooden wardrobe, dim warm bedside lamp casting long shadows across wooden floor' },
-        { regex: /dapur|kitchen/i, name: 'Dapur Tradisional Tua', desc: 'traditional brick stove hearth, hanging clay pots, wooden shelves, dim warm firelight glow and subtle smoke haze' },
-        { regex: /hutan|forest|jalan|kuburan/i, name: 'Jalan Setapak Berkabut', desc: 'narrow dirt footpath flanked by dense tropical trees, thick pre-dawn mist, moonlight filtering through branches' }
-      ];
-
-      locationRules.forEach(rule => {
-        if (rule.regex.test(storyText)) {
-          assets.push({
-            id: `asset_${String(assetIdx++).padStart(3, '0')}`,
-            type: 'Location',
-            name: rule.name,
-            visualDescription: rule.desc
-          });
-        }
-      });
-
-      if (!assets.some(a => a.type === 'Location')) {
-        assets.push({
-          id: `asset_${String(assetIdx++).padStart(3, '0')}`,
-          type: 'Location',
-          name: 'Ruangan Utama Rumah Tradisional',
-          visualDescription: 'dimly lit vintage wooden interior hall, carved wooden pillars, atmospheric dust motes in warm tungsten key light'
-        });
-      }
-
-      const propRules = [
-        { regex: /lampu minyak|lentera|lantern|kerosene/i, name: 'Lampu Minyak Tua', desc: 'antique brass and glass kerosene oil lantern with warm flickering flame' },
-        { regex: /rokok|bara api|cigarette|abu rokok/i, name: 'Rokok & Bara Api Menyala', desc: 'half-burned hand-rolled kretek cigarette with glowing orange ember and curling grey smoke' },
-        { regex: /ember|timba|bucket/i, name: 'Ember Kayu & Tali Tambang', desc: 'weathered rustic wooden well bucket tied to thick coarse hemp rope' },
-        { regex: /foto|potret|portrait|bingkai/i, name: 'Bingkai Foto Keluarga Tua', desc: 'aged dark mahogany wooden picture frame holding a faded sepia vintage family portrait' },
-        { regex: /keris|pisau|pedang|knife/i, name: 'Keris Pusaka Klasik', desc: 'ornate traditional wavy-blade kris dagger with carved wooden sheath' }
-      ];
-
-      propRules.forEach(rule => {
-        if (rule.regex.test(storyText)) {
-          assets.push({
-            id: `asset_${String(assetIdx++).padStart(3, '0')}`,
-            type: 'Prop',
-            name: rule.name,
-            visualDescription: rule.desc
-          });
-        }
-      });
-
-      let rawChunks = storyText.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
-      if (targetSceneCount !== 'auto') {
-        const count = parseInt(targetSceneCount, 10);
-        const allSentences = storyText.match(/[^.!?]+[.!?]+(?:\s*["”])?|[^.!?]+$/g) || [storyText];
-        const cleanSentences = allSentences.map(s => s.trim()).filter(Boolean);
-        rawChunks = [];
-        const perChunk = Math.max(1, Math.ceil(cleanSentences.length / count));
-        for (let i = 0; i < count; i++) {
-          const slice = cleanSentences.slice(i * perChunk, (i + 1) * perChunk);
-          if (slice.length > 0) {
-            rawChunks.push(slice.join(' '));
-          } else {
-            rawChunks.push(cleanSentences[cleanSentences.length - 1]);
-          }
-        }
-      }
-
-      const scenes = rawChunks.map((chunk, i) => {
-        const sceneNum = i + 1;
-        const sceneId = `scene_${String(sceneNum).padStart(3, '0')}`;
-
-        const activeAssets = assets.filter(a => {
-          if (a.type === 'Character') {
-            return chunk.toLowerCase().includes(a.name.toLowerCase()) ||
-              (a.name === 'Sosok Tanpa Kepala' && /tanpa kepala|siluet|sosok/i.test(chunk));
-          }
-          if (a.type === 'Location') {
-            if (/sumur/i.test(chunk) && /sumur/i.test(a.name)) return true;
-            if (/beranda|pintu/i.test(chunk) && /beranda/i.test(a.name)) return true;
-            return i === 0 && assets.filter(x => x.type === 'Location')[0]?.id === a.id;
-          }
-          if (a.type === 'Prop') {
-            if (/lampu|lentera/i.test(chunk) && /lampu/i.test(a.name)) return true;
-            if (/rokok|bara|abu/i.test(chunk) && /rokok/i.test(a.name)) return true;
-            if (/ember|timba|menimba/i.test(chunk) && /ember/i.test(a.name)) return true;
-          }
-          return false;
-        });
-
-        if (!activeAssets.some(a => a.type === 'Character')) {
-          const firstChar = assets.find(a => a.type === 'Character');
-          if (firstChar) activeAssets.unshift(firstChar);
-        }
-        if (!activeAssets.some(a => a.type === 'Location')) {
-          const firstLoc = assets.find(a => a.type === 'Location');
-          if (firstLoc) activeAssets.push(firstLoc);
-        }
-
-        const activeChars = activeAssets.filter(a => a.type === 'Character');
-        const activeLoc = activeAssets.find(a => a.type === 'Location') || assets.find(a => a.type === 'Location');
-        const activeProps = activeAssets.filter(a => a.type === 'Prop');
-        const cLeft = activeChars[0];
-        const cRight = activeChars[1];
-
-        const quoteMatches = [...chunk.matchAll(/["“]([^"”]+)["”]/g)].map(m => m[1].trim());
-        const narrationPart = chunk.replace(/["“][^"”]+["”]/g, '').replace(/\s+/g, ' ').trim();
-
-        let narrationAndDialogue = '';
-        if (narrationPart && quoteMatches.length > 0) {
-          narrationAndDialogue = `[Narrator]: ${narrationPart}\n[Dialogue]: "${quoteMatches.join(' ')}"`;
-        } else if (quoteMatches.length > 0) {
-          narrationAndDialogue = `[Dialogue]: "${quoteMatches.join(' ')}"`;
-        } else {
-          narrationAndDialogue = `[Narrator]: ${chunk}`;
-        }
-
-        const caption = narrationPart || chunk;
-        const charNamesStr = activeChars.map(c => c.name).join(' and ');
-        const propsDescStr = activeProps.length > 0
-          ? ` Props featured: ${activeProps.map(p => `${p.name} [${p.id}] (${p.visualDescription})`).join(', ')}.`
-          : '';
-
-        const imagePrompt = `${stylePrefix}, ${ratio} START FRAME of scene ${sceneNum}. Location: ${activeLoc ? activeLoc.name + ' (' + activeLoc.visualDescription + ')' : 'traditional dim interior'}. ${cLeft ? `${cLeft.name} stands on camera LEFT (${cLeft.visualDescription})` : ''}${cRight ? `, facing ${cRight.name} positioned on camera RIGHT (${cRight.visualDescription})` : ''}.${propsDescStr} Action moment: ${caption}. Keep character faces, outfits, and props strictly consistent with reference assets (${activeAssets.map(a => a.id).join(', ')}). No text, no subtitles, no watermark.`;
-
-        const spokenLine = quoteMatches.length > 0 ? quoteMatches[0] : (narrationPart || chunk);
-        const speakerLabel = quoteMatches.length > 0 && cLeft ? cLeft.name : 'Narrator';
-
-        const videoPrompt = `STORY SCENE ${sceneNum} — 10-SECOND SCENE
-OUTPUT — ${stylePrefix}, exactly 10 seconds, ${ratio}, with synchronized natural ${langSpec.langName} audio (${langSpec.accent} accent). No background music.
-STORY — Continuing seamlessly from scene ${Math.max(1, sceneNum - 1)}: ${chunk}
-START FRAME — The supplied image (${sceneId}) is this scene's exact first frame featuring ${charNamesStr} in ${activeLoc ? activeLoc.name : 'the scene location'}. Animate forward smoothly from it; keep every face, outfit, prop (${activeAssets.map(a => a.id).join(', ')}), and background locked.
-OPENING STATE — ${caption}
-CHARACTERS, LOCATIONS & PROPS —
-${activeAssets.map((a, idx) => `${a.id} (${a.name} — ${a.type}) — ${a.visualDescription}${a.type === 'Character' ? `. Screen side: camera ${idx % 2 === 0 ? 'LEFT' : 'RIGHT'}.` : ''}`).join('\n')}
-TIMELINE
-[00:00-00:02.5] SHOT 1 — Establishing medium shot, subtle camera push-in. ${cLeft ? `${cLeft.name} reacts in ${activeLoc ? activeLoc.name : 'the room'}` : 'Atmospheric tension builds'}. ${quoteMatches.length === 0 ? `Narrator voice-over in ${langSpec.langName} (${langSpec.accent} accent): "${spokenLine}"` : 'Silent visual hook; mouths closed. Audio: natural room tone and subtle footsteps.'}
-[00:02.5-00:07.5] SHOT 2 — Medium close-up on ${cLeft ? cLeft.name : 'the focal subject'}. ${quoteMatches.length > 0 ? `${speakerLabel} looks intently and speaks in ${langSpec.langName} (${langSpec.accent} accent) with emotional delivery: "${spokenLine}"` : `Camera tracks closely as the action unfolds while Narrator continues in ${langSpec.langName}: "${spokenLine}"`}
-[00:07.5-00:10] SHOT 3 — Reaction shot / Breather. ${cRight ? `${cRight.name} reacts tensely on camera RIGHT` : `${cLeft ? cLeft.name : 'Subject'} holds tense expression`}. No dialogue; mouths closed. Audio: ambient wind, natural breath, and environmental SFX.
-AUDIO — Language: ${langSpec.langName} (${langSpec.accent} accent). Only the scripted lines above; lip-sync strictly matched to the speaking character (${speakerLabel}), everyone else keeps mouths closed. Voices: ${activeChars.map(c => `${c.name} — ${c.voiceProfile}`).join('; ')}; Narrator — warm, dramatic ${langSpec.accent} storyteller voice. Natural room tone and realistic SFX. No music. No overlapping voices.
-EXCLUDE — subtitles, captions, text overlays, logos, watermarks, face merging, identity swaps, wardrobe transfer, extra people, simultaneous lip movement, distorted hands, floating props, jitter, reset poses between cuts.
-SAFETY — Original fictional adult characters only. No real people, no celebrity likeness, no logos, no graphic violence.`;
-
-        return {
-          sceneId,
-          usedAssetIds: activeAssets.map(a => a.id),
-          narrationAndDialogue,
-          caption,
-          imagePrompt,
-          videoPrompt
+      const characterAssets = [];
+      entities.characters.forEach((charName, idx) => {
+        const id = `asset_${String(assetCounter++).padStart(3, '0')}`;
+        const roleDesc = idx === 0
+          ? 'expressive Indonesian protagonist in mid-20s, sharp observant eyes, authentic detailed attire'
+          : 'distinctive supporting character with expressive facial features and period-accurate outfit';
+        const assetObj = {
+          id,
+          type: 'CHARACTER',
+          name: charName,
+          image_prompt: `${stylePrefix}, vertical ${ratio} character reference card of ${charName}, ${roleDesc}, two views in one clean reference card: left a clear portrait close-up of the face, right a full-body standing pose. Same character, same outfit, same hairstyle, same proportions in both views. Plain neutral light-gray studio background. soft even studio light. No text. no labels. no logo. no watermark.`
         };
+        assets.push(assetObj);
+        characterAssets.push(assetObj);
       });
+
+      const locId = `asset_${String(assetCounter++).padStart(3, '0')}`;
+      const locationAsset = {
+        id: locId,
+        type: 'LOCATION',
+        name: entities.location,
+        image_prompt: `${stylePrefix}, ${ratio} cinematic establishing environment concept art of ${entities.location}, atmospheric lighting, rich architectural and natural details, deep depth of field, volumetric atmosphere, ultra-detailed textures, no characters in frame, no text, no watermark.`
+      };
+      assets.push(locationAsset);
+
+      let propAsset = null;
+      if (entities.prop) {
+        const propId = `asset_${String(assetCounter++).padStart(3, '0')}`;
+        propAsset = {
+          id: propId,
+          type: 'PROP',
+          name: entities.prop,
+          image_prompt: `${stylePrefix}, ${ratio} isolated key story prop reference sheet of ${entities.prop}, dramatic rim lighting, intricate weathered surface details, centered on plain neutral dark-gray studio background, no text, no labels.`
+        };
+        assets.push(propAsset);
+      }
+
+      let rawParagraphs = storyText
+        .split(/\n+/)
+        .map(p => p.trim())
+        .filter(Boolean);
+
+      if (rawParagraphs.length === 0) {
+        rawParagraphs = [cleanText];
+      }
+
+      const desiredCount = targetSceneCount === 'auto'
+        ? Math.min(Math.max(rawParagraphs.length, 3), 8)
+        : Math.max(1, parseInt(targetSceneCount, 10) || 3);
+
+      const scenes = [];
+      for (let i = 0; i < desiredCount; i++) {
+        const idxStr = String(i + 1).padStart(3, '0');
+        const sourceChunk = rawParagraphs[i % rawParagraphs.length];
+
+        const mentionedChars = characterAssets.filter(c =>
+          new RegExp(`\\b${c.name}\\b`, 'i').test(sourceChunk)
+        );
+        const activeChars = mentionedChars.length > 0 ? mentionedChars : [characterAssets[0]];
+
+        const refIds = [...activeChars.map(c => c.id), locationAsset.id];
+        if (propAsset) refIds.push(propAsset.id);
+
+        const charRefText = activeChars.map(c => `${c.name} (${c.id})`).join(' and ');
+        const propRefText = propAsset ? ` with ${propAsset.name} (${propAsset.id})` : '';
+
+        const cameraAngles = [
+          'Wide establishing shot slowly pushing in',
+          'Medium tracking shot following the character',
+          'Dramatic low-angle close-up with atmospheric depth',
+          'Over-the-shoulder cinematic shot revealing the environment'
+        ];
+        const camera = cameraAngles[i % cameraAngles.length];
+
+        scenes.push({
+          id: `scene_${idxStr}`,
+          title: `Adegan ${i + 1}: ${activeChars[0].name}`,
+          references: refIds,
+          image_prompt: `${stylePrefix}, ${ratio} cinematic keyframe still featuring ${charRefText} at ${locationAsset.name} (${locationAsset.id})${propRefText}, depicting: "${sourceChunk}". Dramatic lighting, detailed composition, 8k film still, no text, no watermark.`,
+          video_prompt: `[STYLE]: ${stylePrefix} | [RATIO]: ${ratio} | [CAMERA]: ${camera} | [ACTION]: ${charRefText} berada di ${locationAsset.name} (${locationAsset.id})${propRefText}, melakukan adegan sesuai naskah: "${sourceChunk}". Pencahayaan dramatis, gerakan kamera halus 24fps, konsistensi wajah & kostum tinggi.`,
+          dialogue: sourceChunk,
+          voice_over: `${langSpec} — "${sourceChunk}"`
+        });
+      }
 
       return { assets, scenes };
     }
 
-    function getLanguageSpec(selectedLang, fullText) {
-      const map = {
-        'Indonesia': { langName: 'Indonesian', accent: 'Indonesian' },
-        'United States': { langName: 'English', accent: 'American English' },
-        'United Kingdom': { langName: 'English', accent: 'British English' },
-        'Philippines': { langName: 'Tagalog / Filipino', accent: 'Filipino' },
-        'Japan': { langName: 'Japanese', accent: 'Japanese' },
-        'South Korea': { langName: 'Korean', accent: 'Korean' },
-        'Thailand': { langName: 'Thai', accent: 'Thai' },
-        'Vietnam': { langName: 'Vietnamese', accent: 'Vietnamese' },
-        'India': { langName: 'Hindi', accent: 'Indian' },
-        'China': { langName: 'Mandarin Chinese', accent: 'Chinese' },
-        'Mexico': { langName: 'Spanish', accent: 'Mexican Spanish' },
-        'Spain': { langName: 'Spanish', accent: 'Castilian Spanish' },
-        'Brazil': { langName: 'Portuguese', accent: 'Brazilian Portuguese' },
-        'France': { langName: 'French', accent: 'French' },
-        'Germany': { langName: 'German', accent: 'German' },
-        'Egypt': { langName: 'Arabic', accent: 'Egyptian Arabic' },
-        'Nigeria': { langName: 'English', accent: 'Nigerian English' },
-        'Bangladesh': { langName: 'Bengali', accent: 'Bengali' }
-      };
+    // =========================================================================
+    // RENDER KARTU REFERENCE ASSETS & CONTINUOUS SCENES
+    // =========================================================================
+    function renderResults(assets, scenes, engineLabel = 'Smart Local Extractor') {
+      const container = document.getElementById('results-container');
+      const emptyState = document.getElementById('empty-state');
+      if (!container) return;
 
-      if (selectedLang !== 'auto' && map[selectedLang]) {
-        return map[selectedLang];
-      }
+      if (emptyState) emptyState.classList.add('hidden');
+      container.classList.remove('hidden');
 
-      const isIndo = /\b(dan|yang|di|ke|dari|ini|itu|dengan|untuk|tidak|ada|menjelang|subuh|sumur|pintu|berteriak|berkata)\b/i.test(fullText);
-      return isIndo
-        ? { langName: 'Indonesian', accent: 'Indonesian' }
-        : { langName: 'English', accent: 'Neutral English' };
-    }
-
-    function getStylePrefix(genre) {
-      const styles = {
-        'anime-2d': 'dark hand-drawn 2D anime illustration (clean ink line art, flat cel shading, anime eyes and facial features, painted anime background; not a photograph, not photorealistic, not 3D)',
-        'stickman': 'clean 2D stickman animation style (expressive black ink stick figures on textured off-white paper background, minimal bold strokes, dynamic comedic/dramatic poses, 2D vector doodle art)',
-        'folklore-horror': 'dark moody Indonesian folklore horror cinema (35mm film grain, dramatic chiaroscuro tungsten lighting, atmospheric mist, realistic period textures)',
-        '3d-pixar': 'high-end 3D animated feature film style (Pixar and Disney inspired stylized 3D characters, expressive large eyes, soft subsurface scattering skin, rich volumetric lighting, 8k render)',
-        'claymation': 'handcrafted claymation stop-motion animation style (tactile sculpted clay textures, subtle fingerprint details, miniature physical set lighting, Aardman inspired)',
-        'comic-novel': 'gritty graphic novel comic book illustration (bold black ink crosshatching, dramatic halftone shadows, vivid cinematic color grading)',
-        'retro-anime': 'vintage 1990s retro cel-shaded anime aesthetic (soft VHS film grain, classic hand-painted cel backgrounds, nostalgic color palette)',
-        'watercolor': 'hand-painted watercolor storybook illustration (delicate ink outlines, soft bleeding watercolor washes on cold-press paper texture, poetic lighting)',
-        'paper-cutout': 'layered 3D paper cutout diorama art (intricate multi-plane paper craft shadows, warm backlight glow, tactile paper grain)',
-        'cyberpunk-noir': 'neon-drenched cyberpunk sci-fi noir (rain-slicked streets, cyan and magenta holographic reflections, atmospheric fog, cinematic anamorphic lens)',
-        'cinematic-drama': 'realistic cinematic live-action film drama (35mm anamorphic lens, natural skin textures, shallow depth of field, moody filmic color grade)',
-        'low-poly': 'stylized low-poly 3D geometric art (faceted flat-shaded surfaces, vibrant atmospheric lighting, clean modern indie game aesthetic)'
-      };
-      return styles[genre] || styles['anime-2d'];
-    }
-
-    function renderReferenceAssetsFromAI(assetsList, stylePrefix, ratio) {
-      const container = document.getElementById('assetPromptsContainer');
-      const assetBadge = document.getElementById('assetBadge');
-      container.innerHTML = '';
-
-      assetsList.forEach((asset, idx) => {
+      const assetsHtml = (assets || []).map((asset, idx) => {
         const assetId = asset.id || `asset_${String(idx + 1).padStart(3, '0')}`;
-        asset.id = assetId;
+        const badgeColor = asset.type === 'LOCATION'
+          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+          : asset.type === 'PROP'
+            ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+            : 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+        const iconClass = asset.type === 'LOCATION'
+          ? 'fa-mountain-sun text-emerald-400'
+          : asset.type === 'PROP'
+            ? 'fa-cube text-amber-400'
+            : 'fa-user-astronaut text-purple-400';
 
-        let fullImagePrompt = '';
-        let typeBadgeClass = 'bg-purple-950 text-purple-300 border-purple-800/70';
-
-        if (asset.type === 'Character') {
-          typeBadgeClass = 'bg-purple-950 text-purple-300 border-purple-800/70';
-          fullImagePrompt = `${stylePrefix}, ${ratio} vertical character reference card of ${asset.name}, ${asset.visualDescription}. Two views in one clean reference card: left a clear portrait close-up of the face, right a full-body standing pose. Same character, same outfit, same hairstyle, same proportions in both views. Plain neutral light-gray background, soft even studio light. No text, no labels, no logo, no watermark. A reusable character reference card, not an action scene.`;
-        } else if (asset.type === 'Location') {
-          typeBadgeClass = 'bg-sky-950 text-sky-300 border-sky-800/70';
-          fullImagePrompt = `${stylePrefix}, ${ratio} vertical location reference — one single hero angle of ${asset.name}, showing ${asset.visualDescription}. No characters, no people, no text, no logo, no watermark.`;
-        } else {
-          typeBadgeClass = 'bg-amber-950 text-amber-300 border-amber-800/70';
-          fullImagePrompt = `${stylePrefix}, ${ratio} isolated object prop reference card of ${asset.name}, ${asset.visualDescription}. Centered hero product view on plain neutral light-gray studio background, crisp detail, soft even lighting. No hands, no characters, no text, no watermark.`;
-        }
-
-        const card = document.createElement('div');
-        card.className = 'bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg';
-        card.innerHTML = `
-          <div class="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-slate-800/80">
-            <div class="flex items-center gap-2">
-              <span class="font-mono text-xs font-bold text-purple-400">${assetId}</span>
-              <span class="text-[10px] px-2 py-0.5 rounded border ${typeBadgeClass} font-semibold uppercase">${asset.type}</span>
-              <span class="text-xs font-semibold text-white">${escapeHtml(asset.name)}</span>
-            </div>
-            <button type="button" onclick="copyFieldText('${assetId}_prompt')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium border border-slate-700 transition flex items-center gap-1.5">
-              <i class="fa-regular fa-copy"></i> Copy Image Prompt
-            </button>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-            <div class="md:col-span-4 space-y-2">
-              <div id="${assetId}_preview_box" class="aspect-[9/14] w-full rounded-xl bg-slate-950 border border-dashed border-slate-800 flex flex-col items-center justify-center overflow-hidden relative group">
-                <i class="fa-regular fa-image text-2xl text-slate-600 mb-1.5"></i>
-                <span class="text-[10px] text-slate-500 text-center px-2">Preview ${assetId}<br>(${escapeHtml(asset.name)})</span>
-                <img id="${assetId}_img" class="hidden w-full h-full object-cover" alt="${escapeHtml(asset.name)}" />
+        return `
+          <div class="bg-[#13141f] border border-slate-800/90 rounded-2xl p-5 shadow-lg card-dark">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div class="flex items-center gap-2.5">
+                <span class="font-mono text-xs font-bold text-purple-400 bg-purple-500/10 border border-purple-500/30 px-2.5 py-1 rounded-lg">${escapeHtml(assetId)}</span>
+                <span class="text-[11px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-md border ${badgeColor}">${escapeHtml(asset.type || 'CHARACTER')}</span>
+                <h4 class="text-sm font-bold text-white">${escapeHtml(asset.name || 'Asset')}</h4>
               </div>
-              <label class="w-full py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium border border-slate-700 cursor-pointer flex items-center justify-center gap-1.5 transition">
-                <i class="fa-solid fa-upload"></i> Pilih File Gambar
-                <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event, '${assetId}_img', '${assetId}_preview_box')" />
-              </label>
-            </div>
-
-            <div class="md:col-span-8 space-y-2">
-              <label class="text-[11px] font-medium text-slate-400 block">Image prompt (${escapeHtml(asset.type)}: ${escapeHtml(asset.name)})</label>
-              <textarea id="${assetId}_prompt" rows="8" class="w-full rounded-xl p-3 font-mono text-[11px] text-slate-200 leading-relaxed resize-y">${fullImagePrompt}</textarea>
-            </div>
-          </div>
-        `;
-        container.appendChild(card);
-      });
-
-      assetsWrapper.classList.remove('hidden');
-      assetBadge.textContent = `${assetsList.length} Reference Assets`;
-      return assetsList;
-    }
-
-    function renderScenesFromAI(scenesList, allAssets, stylePrefix, ratio, langSpec) {
-      const sceneBadge = document.getElementById('sceneBadge');
-      scenesContainer.innerHTML = '';
-
-      scenesList.forEach((scene, idx) => {
-        const sceneNum = idx + 1;
-        const sceneId = scene.sceneId || `scene_${String(sceneNum).padStart(3, '0')}`;
-        const usedIds = Array.isArray(scene.usedAssetIds) && scene.usedAssetIds.length > 0
-          ? scene.usedAssetIds
-          : allAssets.slice(0, 2).map(a => a.id);
-
-        const assetBadgesHtml = usedIds.map(id => {
-          const found = allAssets.find(a => a.id === id);
-          const label = found ? `${id} (${escapeHtml(found.name)})` : id;
-          const badgeStyle = found && found.type === 'Prop'
-            ? 'bg-amber-950/80 text-amber-300 border-amber-700/60'
-            : found && found.type === 'Location'
-              ? 'bg-sky-950/80 text-sky-300 border-sky-700/60'
-              : 'bg-purple-950/80 text-purple-300 border-purple-700/60';
-          return `<span class="text-[10px] font-mono ${badgeStyle} border px-2 py-0.5 rounded-md">${label}</span>`;
-        }).join('');
-
-        const card = document.createElement('div');
-        card.className = 'bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4';
-        card.innerHTML = `
-          <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800">
-            <div class="flex items-center gap-2.5">
-              <span class="font-mono text-xs font-bold text-emerald-400">${sceneId}</span>
-              <span class="text-[11px] text-slate-400">Part ${sceneNum} of ${scenesList.length}</span>
-            </div>
-            <div class="flex flex-wrap items-center gap-1.5">
-              <span class="text-[10px] text-slate-400 mr-1">Assets Used:</span>
-              ${assetBadgesHtml}
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
-            <!-- Left Start Frame Preview -->
-            <div class="md:col-span-4 space-y-2">
-              <div id="${sceneId}_preview_box" class="aspect-[9/16] w-full rounded-xl bg-slate-950 border border-dashed border-slate-800 flex flex-col items-center justify-center overflow-hidden relative">
-                <i class="fa-solid fa-film text-2xl text-slate-600 mb-1.5"></i>
-                <span class="text-[10px] text-slate-500 text-center px-3">Start Frame ${sceneId}</span>
-                <img id="${sceneId}_img" class="hidden w-full h-full object-cover" alt="${sceneId}" />
-              </div>
-              <label class="w-full py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium border border-slate-700 cursor-pointer flex items-center justify-center gap-1.5 transition">
-                <i class="fa-solid fa-upload"></i> Pilih File Start Frame
-                <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event, '${sceneId}_img', '${sceneId}_preview_box')" />
-              </label>
-              <button type="button" onclick="copyFieldText('${sceneId}_video')" class="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-1.5">
-                <i class="fa-regular fa-copy"></i> Copy Video Prompt
+              <button type="button" onclick="copyTextFromButton(this)" data-copy="${escapeHtml(asset.image_prompt || '')}"
+                class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1.5">
+                <i class="fa-regular fa-copy"></i> Copy Image Prompt
               </button>
             </div>
-
-            <!-- Right Prompts & Narration -->
-            <div class="md:col-span-8 space-y-3.5">
-              <div>
-                <div class="flex justify-between items-center mb-1">
-                  <label class="text-[11px] font-semibold text-sky-400">Narration / dialogue (${langSpec.langName})</label>
-                  <button type="button" onclick="copyFieldText('${sceneId}_narration')" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
-                    <i class="fa-regular fa-copy"></i> Copy
-                  </button>
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch">
+              <div class="md:col-span-4 bg-[#0b0c12] border border-slate-800/80 rounded-xl p-4 flex flex-col items-center justify-center text-center min-h-[170px]">
+                <div class="w-11 h-11 rounded-2xl bg-slate-800/80 border border-slate-700/70 flex items-center justify-center text-base mb-2.5">
+                  <i class="fa-solid ${iconClass}"></i>
                 </div>
-                <textarea id="${sceneId}_narration" rows="2" class="w-full rounded-xl p-2.5 text-xs text-slate-100 leading-relaxed resize-y">${scene.narrationAndDialogue}</textarea>
+                <p class="text-xs font-bold text-slate-200">${escapeHtml(asset.name || assetId)}</p>
+                <p class="text-[11px] font-mono text-slate-500 mt-0.5">${escapeHtml(assetId)} &bull; ${escapeHtml(asset.type || 'ASSET')}</p>
               </div>
-
-              <div>
-                <div class="flex justify-between items-center mb-1">
-                  <label class="text-[11px] font-semibold text-slate-300">Caption</label>
-                  <button type="button" onclick="copyFieldText('${sceneId}_caption')" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
-                    <i class="fa-regular fa-copy"></i> Copy
-                  </button>
-                </div>
-                <textarea id="${sceneId}_caption" rows="2" class="w-full rounded-xl p-2.5 text-xs text-slate-300 leading-relaxed resize-y">${scene.caption}</textarea>
-              </div>
-
-              <div>
-                <div class="flex justify-between items-center mb-1">
-                  <label class="text-[11px] font-semibold text-amber-400">Image prompt (Nano Banana Start Frame)</label>
-                  <button type="button" onclick="copyFieldText('${sceneId}_image')" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
-                    <i class="fa-regular fa-copy"></i> Copy
-                  </button>
-                </div>
-                <textarea id="${sceneId}_image" rows="4" class="w-full rounded-xl p-2.5 font-mono text-[11px] text-amber-100 leading-relaxed resize-y">${scene.imagePrompt}</textarea>
-              </div>
-
-              <div>
-                <div class="flex justify-between items-center mb-1">
-                  <label class="text-[11px] font-semibold text-emerald-400">Video prompt (Google Flow / Veo Native Audio)</label>
-                  <button type="button" onclick="copyFieldText('${sceneId}_video')" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
-                    <i class="fa-regular fa-copy"></i> Copy
-                  </button>
-                </div>
-                <textarea id="${sceneId}_video" rows="8" class="w-full rounded-xl p-2.5 font-mono text-[11px] text-emerald-200 leading-relaxed resize-y">${scene.videoPrompt}</textarea>
+              <div class="md:col-span-8 flex flex-col">
+                <label class="text-xs text-slate-400 mb-1.5">Image prompt (${escapeHtml(asset.type || 'Asset')}: <strong class="text-slate-200">${escapeHtml(asset.name || '')}</strong>)</label>
+                <textarea readonly rows="5" class="w-full flex-1 bg-[#0b0c12] border border-slate-800 rounded-xl p-3 text-xs font-mono text-slate-200 leading-relaxed resize-none focus:outline-none">${escapeHtml(asset.image_prompt || '')}</textarea>
               </div>
             </div>
           </div>
         `;
-        scenesContainer.appendChild(card);
+      }).join('');
+
+      const scenesHtml = (scenes || []).map((scene, idx) => {
+        const sceneId = scene.id || `scene_${String(idx + 1).padStart(3, '0')}`;
+        const refs = Array.isArray(scene.references) ? scene.references : [];
+        const refsBadges = refs.map(r => `<span class="font-mono text-[11px] bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded">${escapeHtml(r)}</span>`).join('');
+        const sceneImagePrompt = scene.image_prompt || `${scene.video_prompt || ''} --still keyframe`;
+
+        return `
+          <div class="bg-[#13141f] border border-slate-800/90 rounded-2xl p-5 shadow-lg card-dark">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3.5">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="font-mono text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-lg">${escapeHtml(sceneId)}</span>
+                <h4 class="text-sm font-bold text-white">${escapeHtml(scene.title || `Scene ${idx + 1}`)}</h4>
+                <div class="flex items-center gap-1 ml-1">${refsBadges}</div>
+              </div>
+              <div class="flex flex-wrap items-center gap-2">
+                <button type="button" onclick="copyTextFromButton(this)" data-copy="${escapeHtml(sceneImagePrompt)}"
+                  class="text-xs bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 px-3 py-1.5 rounded-lg border border-purple-500/30 transition flex items-center gap-1.5">
+                  <i class="fa-regular fa-image"></i> Copy Image Prompt
+                </button>
+                <button type="button" onclick="copyTextFromButton(this)" data-copy="${escapeHtml(scene.video_prompt || '')}"
+                  class="text-xs bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 px-3 py-1.5 rounded-lg border border-emerald-500/30 transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-film"></i> Copy Video Prompt
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+              <div>
+                <label class="text-[11px] uppercase tracking-wider text-purple-300/90 font-semibold block mb-1">
+                  <i class="fa-regular fa-image mr-1"></i> Image Prompt (Start Frame / Keyframe)
+                </label>
+                <textarea readonly rows="4" class="w-full bg-[#0b0c12] border border-slate-800 rounded-xl p-3 text-xs font-mono text-slate-200 leading-relaxed resize-none focus:outline-none">${escapeHtml(sceneImagePrompt)}</textarea>
+              </div>
+              <div>
+                <label class="text-[11px] uppercase tracking-wider text-emerald-300/90 font-semibold block mb-1">
+                  <i class="fa-solid fa-film mr-1"></i> Video Prompt (Flow / Motion)
+                </label>
+                <textarea readonly rows="4" class="w-full bg-[#0b0c12] border border-slate-800 rounded-xl p-3 text-xs font-mono text-slate-200 leading-relaxed resize-none focus:outline-none">${escapeHtml(scene.video_prompt || '')}</textarea>
+              </div>
+            </div>
+
+            <div class="bg-[#0b0c12] border border-slate-800/80 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2">
+              <div class="text-xs text-slate-300">
+                <span class="text-purple-400 font-semibold"><i class="fa-solid fa-microphone-lines mr-1"></i> Voice-Over / Narasi:</span>
+                <span class="ml-1">${escapeHtml(scene.voice_over || scene.dialogue || '')}</span>
+              </div>
+              <button type="button" onclick="copyTextFromButton(this)" data-copy="${escapeHtml(scene.dialogue || scene.voice_over || '')}"
+                class="text-[11px] text-slate-400 hover:text-white bg-slate-800/80 px-2.5 py-1 rounded-lg transition">
+                <i class="fa-regular fa-copy mr-1"></i> Copy VO
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <div class="space-y-6">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div class="flex items-center gap-2.5">
+                <span class="text-[11px] font-bold uppercase tracking-wider bg-purple-600 text-white px-2.5 py-1 rounded-md">Reference Images</span>
+                <h3 class="text-sm font-bold text-white">Karakter, Lokasi &amp; Properti Cerita</h3>
+              </div>
+              <div class="flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                <span class="bg-slate-800/80 border border-slate-700 px-2.5 py-1 rounded-lg text-slate-300">Engine: <strong class="text-purple-300">${escapeHtml(engineLabel)}</strong></span>
+                <button type="button" onclick="copyAllPromptsBundle()"
+                  class="bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 rounded-lg font-semibold transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-copy"></i> Copy All Prompts
+                </button>
+              </div>
+            </div>
+            <div class="space-y-4">${assetsHtml}</div>
+          </div>
+
+          <div class="pt-2 border-t border-slate-800/80">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div class="flex items-center gap-2.5">
+                <span class="text-[11px] font-bold uppercase tracking-wider bg-emerald-600 text-white px-2.5 py-1 rounded-md">Continuous Scenes</span>
+                <h3 class="text-sm font-bold text-white">Alur Adegan Image, Video &amp; Voice-Over</h3>
+              </div>
+              <span class="text-xs text-slate-400">${scenes.length} Scenes</span>
+            </div>
+            <div class="space-y-4">${scenesHtml}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    window.copyAllPromptsBundle = function () {
+      if (!latestGeneratedData || (!latestGeneratedData.assets.length && !latestGeneratedData.scenes.length)) return;
+      const lines = [];
+      lines.push('=== REFERENCE ASSETS ===');
+      latestGeneratedData.assets.forEach(a => {
+        lines.push(`[${a.id}] (${a.type}) ${a.name}:\n${a.image_prompt}\n`);
+      });
+      lines.push('=== CONTINUOUS SCENES ===');
+      latestGeneratedData.scenes.forEach(s => {
+        lines.push(`[${s.id}] ${s.title} (Refs: ${(s.references || []).join(', ')})`);
+        lines.push(`IMAGE PROMPT: ${s.image_prompt || ''}`);
+        lines.push(`VIDEO PROMPT: ${s.video_prompt || ''}`);
+        lines.push(`VOICE OVER: ${s.voice_over || s.dialogue || ''}\n`);
       });
 
-      scenesWrapper.classList.remove('hidden');
-      sceneBadge.textContent = `${scenesList.length} Scenes`;
-    }
+      const temp = document.createElement('textarea');
+      temp.value = lines.join('\n');
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      document.body.removeChild(temp);
+      window.showToast('Seluruh Asset & Scene Prompts berhasil disalin!');
+    };
 
     function escapeHtml(str) {
       return String(str || '')
@@ -1359,47 +989,331 @@ SAFETY — Original fictional adult characters only. No real people, no celebrit
         .replace(/'/g, '&#39;');
     }
 
-    function handleImageUpload(event, imgId, boxId) {
-      const file = event.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        const imgEl = document.getElementById(imgId);
-        const boxEl = document.getElementById(boxId);
-        if (imgEl && boxEl) {
-          imgEl.src = e.target.result;
-          imgEl.classList.remove('hidden');
-          Array.from(boxEl.children).forEach(child => {
-            if (child.tagName !== 'IMG') child.classList.add('hidden');
-          });
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-
-    function copyFieldText(elementId) {
-      const el = document.getElementById(elementId);
-      if (!el) return;
-      el.select();
+    window.copyTextFromButton = function (btn) {
+      const text = btn.getAttribute('data-copy') || '';
+      const temp = document.createElement('textarea');
+      temp.value = text;
+      document.body.appendChild(temp);
+      temp.select();
       document.execCommand('copy');
-      showToast('Prompt berhasil disalin ke clipboard!');
-    }
+      document.body.removeChild(temp);
 
-    function showToast(message) {
-      const existing = document.getElementById('toast-notif');
-      if (existing) existing.remove();
-
-      const toast = document.createElement('div');
-      toast.id = 'toast-notif';
-      toast.className = 'fixed bottom-5 right-5 z-50 bg-emerald-600 text-white text-xs font-semibold px-4 py-2.5 rounded-xl shadow-2xl border border-emerald-400/30 transition-opacity duration-300';
-      toast.textContent = message;
-      document.body.appendChild(toast);
-
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-check text-emerald-400"></i> Tersalin!';
+      window.showToast('Prompt berhasil disalin ke clipboard!');
       setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 300);
-      }, 2400);
+        btn.innerHTML = originalHtml;
+      }, 1600);
+    };
+
+    // =========================================================================
+    // MANAJEMEN API KEYS, SAVED PROJECTS & EVENT LISTENERS
+    // =========================================================================
+    let savedApiKeys = JSON.parse(localStorage.getItem('bm_gemini_api_keys') || '[]');
+    let latestGeneratedData = { assets: [], scenes: [] };
+    let savedProjectsList = [];
+
+    function getUserStorageKey() {
+      const uid = window.currentGoogleProfile && window.currentGoogleProfile.uid
+        ? window.currentGoogleProfile.uid
+        : 'guest_local';
+      return `bm_saved_projects_${uid}`;
     }
+
+    window.loadUserProjectsFromStorage = function () {
+      try {
+        savedProjectsList = JSON.parse(localStorage.getItem(getUserStorageKey()) || '[]');
+      } catch (e) {
+        savedProjectsList = [];
+      }
+      const badge = document.getElementById('saved-projects-count');
+      if (badge) badge.textContent = String(savedProjectsList.length);
+      renderSavedProjectsList();
+    };
+
+    function renderSavedProjectsList() {
+      const listEl = document.getElementById('saved-projects-list');
+      if (!listEl) return;
+
+      if (savedProjectsList.length === 0) {
+        listEl.innerHTML = `
+          <div class="text-center py-8 text-slate-400 text-sm">
+            Belum ada project tersimpan pada akun ini.
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = savedProjectsList.map((proj) => `
+        <div class="bg-[#0d0e17] border border-slate-800 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h4 class="text-sm font-bold text-white">${escapeHtml(proj.title)}</h4>
+            <p class="text-[11px] text-slate-400 mt-0.5">
+              ${escapeHtml(proj.ratio)} &bull; ${escapeHtml(proj.style)} &bull; ${(proj.assets || []).length} Assets, ${(proj.scenes || []).length} Scenes
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="loadProjectById('${escapeHtml(proj.id)}')"
+              class="text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-lg font-medium transition">
+              Muat Project
+            </button>
+            <button type="button" onclick="deleteProjectById('${escapeHtml(proj.id)}')"
+              class="text-xs bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 px-2.5 py-1.5 rounded-lg border border-rose-500/30 transition">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    window.loadProjectById = function (id) {
+      const proj = savedProjectsList.find(p => p.id === id);
+      if (!proj) return;
+      const titleInput = document.getElementById('project-title-input');
+      const storyInput = document.getElementById('story-input');
+      const ratioSelect = document.getElementById('ratio-select');
+      const styleSelect = document.getElementById('style-select');
+      const langSelect = document.getElementById('lang-select');
+      const sceneCountSelect = document.getElementById('scene-count-select');
+
+      if (titleInput) titleInput.value = proj.title || '';
+      if (storyInput) {
+        storyInput.value = proj.story || '';
+        storyInput.dispatchEvent(new Event('input'));
+      }
+      if (ratioSelect && proj.ratio) ratioSelect.value = proj.ratio;
+      if (styleSelect && proj.style) styleSelect.value = proj.style;
+      if (langSelect && proj.lang) langSelect.value = proj.lang;
+      if (sceneCountSelect && proj.targetSceneCount) sceneCountSelect.value = proj.targetSceneCount;
+
+      if ((proj.assets && proj.assets.length > 0) || (proj.scenes && proj.scenes.length > 0)) {
+        latestGeneratedData = { assets: proj.assets || [], scenes: proj.scenes || [] };
+        renderResults(proj.assets || [], proj.scenes || [], 'Project Tersimpan');
+      }
+
+      const modal = document.getElementById('saved-projects-modal');
+      if (modal) modal.classList.add('hidden');
+      window.showToast(`Project "${proj.title}" berhasil dimuat!`);
+    };
+
+    window.deleteProjectById = function (id) {
+      savedProjectsList = savedProjectsList.filter(p => p.id !== id);
+      localStorage.setItem(getUserStorageKey(), JSON.stringify(savedProjectsList));
+      window.loadUserProjectsFromStorage();
+      window.showToast('Project dihapus.');
+    };
+
+    function renderApiKeysList() {
+      const container = document.getElementById('api-keys-list');
+      if (!container) return;
+      if (savedApiKeys.length === 0) {
+        container.innerHTML = `<p class="text-xs text-slate-500 italic">Belum ada API Key manual. Aplikasi otomatis memakai Akun Google atau Smart Local Extractor.</p>`;
+        return;
+      }
+      container.innerHTML = savedApiKeys.map((key, idx) => `
+        <div class="flex items-center justify-between bg-[#0d0e17] border border-slate-800 px-3 py-2 rounded-lg text-xs">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="font-mono text-slate-300">Key #${idx + 1}: ${escapeHtml(key.slice(0, 8))}••••••••${escapeHtml(key.slice(-4))}</span>
+          </div>
+          <button type="button" onclick="removeApiKey(${idx})" class="text-rose-400 hover:text-rose-300 px-2 py-0.5">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    window.removeApiKey = function (index) {
+      savedApiKeys.splice(index, 1);
+      localStorage.setItem('bm_gemini_api_keys', JSON.stringify(savedApiKeys));
+      renderApiKeysList();
+      updateApiBadges();
+      window.showToast('API Key dihapus.');
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      updateApiBadges();
+      renderApiKeysList();
+      window.loadUserProjectsFromStorage();
+
+      const storyInput = document.getElementById('story-input');
+      const charCountEl = document.getElementById('char-count');
+      const wordCountEl = document.getElementById('word-count');
+      const btnSample = document.getElementById('btn-sample-story');
+      const btnGenerate = document.getElementById('btn-generate');
+      const btnSaveProject = document.getElementById('btn-save-project');
+
+      if (storyInput) {
+        storyInput.addEventListener('input', () => {
+          const val = storyInput.value || '';
+          if (charCountEl) charCountEl.textContent = String(val.length);
+          const words = val.trim() ? val.trim().split(/\s+/).length : 0;
+          if (wordCountEl) wordCountEl.textContent = String(words);
+        });
+      }
+
+      if (btnSample && storyInput) {
+        btnSample.addEventListener('click', () => {
+          const titleInput = document.getElementById('project-title-input');
+          if (titleInput && !titleInput.value.trim()) {
+            titleInput.value = 'Misteri Danau Toba';
+          }
+          storyInput.value = `Di tepi Danau Toba yang berkabut pada malam purnama, Raka dan Sari menemukan sebuah perahu kayu tua tanpa pendayung yang terombang-ambing pelan di dermaga sunyi.\n\nDi dalam perahu itu tergeletak sebuah lentera kuningan kuno yang menyala redup dengan cahaya kebiruan, memantulkan bayangan sosok wanita berbusana adat Batak di permukaan air yang tenang.\n\nSaat Raka menyentuh lentera tersebut, kabut tebal mendadak menyelimuti seluruh danau sementara Sari mendengar suara gendang gondang menggema dari tengah perairan.`;
+          storyInput.dispatchEvent(new Event('input'));
+          window.showToast('Contoh cerita berhasil diisi!');
+        });
+      }
+
+      if (btnSaveProject) {
+        btnSaveProject.addEventListener('click', () => {
+          const titleInput = document.getElementById('project-title-input');
+          const ratioSelect = document.getElementById('ratio-select');
+          const styleSelect = document.getElementById('style-select');
+          const langSelect = document.getElementById('lang-select');
+          const sceneCountSelect = document.getElementById('scene-count-select');
+
+          const storyVal = (storyInput?.value || '').trim();
+          const titleVal = (titleInput?.value || '').trim() || (storyVal ? storyVal.split(/\s+/).slice(0, 4).join(' ') : 'Project Tanpa Judul');
+
+          if (!storyVal && latestGeneratedData.assets.length === 0) {
+            window.showToast('Masukkan naskah cerita terlebih dahulu sebelum menyimpan.');
+            return;
+          }
+
+          const newProj = {
+            id: `proj_${Date.now()}`,
+            title: titleVal,
+            story: storyVal,
+            ratio: ratioSelect?.value || '9:16 Vertical',
+            style: styleSelect?.value || 'Dark 2D Anime Illustration',
+            lang: langSelect?.value || 'Auto',
+            targetSceneCount: sceneCountSelect?.value || 'auto',
+            assets: latestGeneratedData.assets || [],
+            scenes: latestGeneratedData.scenes || [],
+            updatedAt: new Date().toISOString()
+          };
+
+          savedProjectsList.unshift(newProj);
+          localStorage.setItem(getUserStorageKey(), JSON.stringify(savedProjectsList));
+          window.loadUserProjectsFromStorage();
+          window.showToast(`Project "${titleVal}" berhasil disimpan!`);
+        });
+      }
+
+      if (btnGenerate) {
+        btnGenerate.addEventListener('click', async () => {
+          const storyText = (storyInput?.value || '').trim();
+          if (!storyText) {
+            window.showToast('Silakan masukkan naskah cerita terlebih dahulu!');
+            return;
+          }
+
+          const ratio = document.getElementById('ratio-select')?.value || '9:16 Vertical';
+          const stylePrefix = document.getElementById('style-select')?.value || 'Dark 2D Anime Illustration';
+          const langSpec = document.getElementById('lang-select')?.value || 'Auto (match the language of the story)';
+          const targetSceneCount = document.getElementById('scene-count-select')?.value || 'auto';
+
+          const originalBtnHtml = btnGenerate.innerHTML;
+          btnGenerate.disabled = true;
+          btnGenerate.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Memproses Cerita &amp; Assets...';
+
+          try {
+            let resultPlan = null;
+            let engineUsed = 'Smart Local Extractor';
+
+            try {
+              resultPlan = await analyzeStoryWithGeminiMultiKey(
+                storyText,
+                stylePrefix,
+                ratio,
+                langSpec,
+                targetSceneCount,
+                savedApiKeys
+              );
+              engineUsed = savedApiKeys.length > 0 ? 'Gemini API Key' : 'Akun Google AI';
+              window.showToast(`Berhasil membuat ${resultPlan.assets.length} Assets & ${resultPlan.scenes.length} Scenes (${engineUsed})!`);
+            } catch (aiErr) {
+              if (aiErr && aiErr.message !== 'LOCAL_FALLBACK' && (savedApiKeys.length > 0 || window.googleOAuthAccessToken)) {
+                if (String(aiErr.message).includes('401') || String(aiErr.message).includes('UNAUTHENTICATED')) {
+                  window.googleOAuthAccessToken = null;
+                  sessionStorage.removeItem('bm_google_oauth_token');
+                }
+              }
+              resultPlan = buildLocalStoryPlan(storyText, stylePrefix, ratio, langSpec, targetSceneCount);
+              engineUsed = 'Smart Local Extractor';
+            }
+
+            latestGeneratedData = resultPlan;
+            renderResults(resultPlan.assets, resultPlan.scenes, engineUsed);
+          } finally {
+            btnGenerate.disabled = false;
+            btnGenerate.innerHTML = originalBtnHtml;
+          }
+        });
+      }
+
+      // Modal API Settings
+      const apiModal = document.getElementById('api-settings-modal');
+      const btnOpenApi = document.getElementById('btn-api-settings');
+      const btnOpenApiInline = document.getElementById('api-status-indicator');
+      const btnCloseApi = document.getElementById('btn-close-api-modal');
+      const btnAddApi = document.getElementById('btn-add-api-key');
+      const btnClearKeys = document.getElementById('btn-clear-all-keys');
+      const newApiInput = document.getElementById('new-api-key-input');
+
+      [btnOpenApi, btnOpenApiInline].forEach(el => {
+        if (el && apiModal) {
+          el.addEventListener('click', () => apiModal.classList.remove('hidden'));
+        }
+      });
+      if (btnCloseApi && apiModal) {
+        btnCloseApi.addEventListener('click', () => apiModal.classList.add('hidden'));
+      }
+      if (btnAddApi && newApiInput) {
+        btnAddApi.addEventListener('click', () => {
+          const rawLines = newApiInput.value.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
+          if (rawLines.length === 0) {
+            window.showToast('Masukkan minimal satu Gemini API Key terlebih dahulu.');
+            return;
+          }
+          let addedCount = 0;
+          rawLines.forEach(key => {
+            if (!savedApiKeys.includes(key)) {
+              savedApiKeys.push(key);
+              addedCount++;
+            }
+          });
+          localStorage.setItem('bm_gemini_api_keys', JSON.stringify(savedApiKeys));
+          newApiInput.value = '';
+          renderApiKeysList();
+          updateApiBadges();
+          window.showToast(`${addedCount} Gemini API Key berhasil ditambahkan!`);
+        });
+      }
+      if (btnClearKeys) {
+        btnClearKeys.addEventListener('click', () => {
+          savedApiKeys = [];
+          localStorage.setItem('bm_gemini_api_keys', JSON.stringify(savedApiKeys));
+          renderApiKeysList();
+          updateApiBadges();
+          window.showToast('Semua API Key dihapus.');
+        });
+      }
+
+      // Modal Saved Projects
+      const projModal = document.getElementById('saved-projects-modal');
+      const btnOpenProj = document.getElementById('btn-saved-projects');
+      const btnCloseProj = document.getElementById('btn-close-projects-modal');
+      if (btnOpenProj && projModal) {
+        btnOpenProj.addEventListener('click', () => {
+          window.loadUserProjectsFromStorage();
+          projModal.classList.remove('hidden');
+        });
+      }
+      if (btnCloseProj && projModal) {
+        btnCloseProj.addEventListener('click', () => projModal.classList.add('hidden'));
+      }
+    });
   </script>
 
   <!-- 1. Script Modal Popup & Floating -->
