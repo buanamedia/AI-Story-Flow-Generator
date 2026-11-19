@@ -1096,19 +1096,19 @@ ${storyText}`;
         const propsDescStr = activeProps.length > 0
           ? ` Props featured: ${activeProps.map(p => `${p.name} [${p.id}] (${p.visualDescription})`).join(', ')}.`
           : '';
+        const startFrameFileName = `${sceneId}_startframe.png`;
+        const videoFileName = `${sceneId}.mp4`;
 
-        const imagePrompt = `${stylePrefix}, ${ratio} START FRAME of scene ${sceneNum}. Location: ${activeLoc ? activeLoc.name + ' (' + activeLoc.visualDescription + ')' : 'traditional dim interior'}. ${cLeft ? `${cLeft.name} stands on camera LEFT (${cLeft.visualDescription})` : ''}${cRight ? `, facing ${cRight.name} positioned on camera RIGHT (${cRight.visualDescription})` : ''}.${propsDescStr} Action moment: ${caption}. Keep character faces, outfits, and props strictly consistent with reference assets (${activeAssets.map(a => a.id).join(', ')}). No text, no subtitles, no watermark.`;
+        const imagePrompt = `[OUTPUT_FILENAME: ${startFrameFileName}]\n${stylePrefix}, ${ratio} START FRAME of scene ${sceneNum} (${sceneId}). Location: ${activeLoc ? activeLoc.name + ' (' + activeLoc.visualDescription + ')' : 'traditional dim interior'}. ${cLeft ? `${cLeft.name} stands on camera LEFT (${cLeft.visualDescription})` : ''}${cRight ? `, facing ${cRight.name} positioned on camera RIGHT (${cRight.visualDescription})` : ''}.${propsDescStr} Action moment: ${caption}. Keep character faces, outfits, and props strictly consistent with reference assets (${activeAssets.map(a => a.id).join(', ')}). Save generated image file as "${startFrameFileName}". No text, no subtitles, no watermark.`;
 
         const spokenLine = quoteMatches.length > 0 ? quoteMatches[0] : (narrationPart || chunk);
         const speakerLabel = quoteMatches.length > 0 && cLeft ? cLeft.name : 'Narrator';
 
-        const videoPrompt = `STORY SCENE ${sceneNum} — 10-SECOND SCENE
-OUTPUT — ${stylePrefix}, exactly 10 seconds, ${ratio}, with synchronized natural ${langSpec.langName} audio (${langSpec.accent} accent). No background music.
+        const videoPrompt = `[OUTPUT_FILENAME: ${videoFileName}]
+STORY SCENE ${sceneNum} — 10-SECOND SCENE (${sceneId})
+OUTPUT — ${stylePrefix}, exactly 10 seconds, ${ratio}, with synchronized natural ${langSpec.langName} audio (${langSpec.accent} accent). Save generated video file as "${videoFileName}". No background music.
 STORY — Continuing seamlessly from scene ${Math.max(1, sceneNum - 1)}: ${chunk}
-START FRAME — The supplied image (${sceneId}) is this scene's exact first frame featuring ${charNamesStr} in ${activeLoc ? activeLoc.name : 'the scene location'}. Animate forward smoothly from it; keep every face, outfit, prop (${activeAssets.map(a => a.id).join(', ')}), and background locked.
-OPENING STATE — ${caption}
-CHARACTERS, LOCATIONS & PROPS —
-${activeAssets.map((a, idx) => `${a.id} (${a.name} — ${a.type}) — ${a.visualDescription}${a.type === 'Character' ? `. Screen side: camera ${idx % 2 === 0 ? 'LEFT' : 'RIGHT'}.` : ''}`).join('\n')}
+START FRAME — The supplied image (${startFrameFileName}) is this scene's exact first frame featuring ${charNamesStr} in ${activeLoc ? activeLoc.name : 'the scene location'}. Animate forward smoothly from it; keep every face, outfit, prop (${activeAssets.map(a => a.id).join(', ')}), and background locked.
 TIMELINE
 [00:00-00:02.5] SHOT 1 — Establishing medium shot, subtle camera push-in. ${cLeft ? `${cLeft.name} reacts in ${activeLoc ? activeLoc.name : 'the room'}` : 'Atmospheric tension builds'}. ${quoteMatches.length === 0 ? `Narrator voice-over in ${langSpec.langName} (${langSpec.accent} accent): "${spokenLine}"` : 'Silent visual hook; mouths closed. Audio: natural room tone and subtle footsteps.'}
 [00:02.5-00:07.5] SHOT 2 — Medium close-up on ${cLeft ? cLeft.name : 'the focal subject'}. ${quoteMatches.length > 0 ? `${speakerLabel} looks intently and speaks in ${langSpec.langName} (${langSpec.accent} accent) with emotional delivery: "${spokenLine}"` : `Camera tracks closely as the action unfolds while Narrator continues in ${langSpec.langName}: "${spokenLine}"`}
@@ -1191,26 +1191,31 @@ SAFETY — Original fictional adult characters only. No real people, no celebrit
 
         let fullImagePrompt = '';
         let typeBadgeClass = 'bg-purple-950 text-purple-300 border-purple-800/70';
+        const slugName = String(asset.name || 'asset').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+        const assetFileName = `${assetId}_${slugName || 'item'}.png`;
 
         if (asset.type === 'Character') {
           typeBadgeClass = 'bg-purple-950 text-purple-300 border-purple-800/70';
-          fullImagePrompt = `${stylePrefix}, ${ratio} vertical character reference card of ${asset.name}, ${asset.visualDescription}. Two views in one clean reference card: left a clear portrait close-up of the face, right a full-body standing pose. Same character, same outfit, same hairstyle, same proportions in both views. Plain neutral light-gray background, soft even studio light. No text, no labels, no logo, no watermark. A reusable character reference card, not an action scene.`;
+          fullImagePrompt = `[OUTPUT_FILENAME: ${assetFileName}]\n${stylePrefix}, ${ratio} vertical character reference card of ${asset.name} (${assetId}), ${asset.visualDescription}. Two views in one clean reference card: left a clear portrait close-up of the face, right a full-body standing pose. Same character, same outfit, same hairstyle, same proportions in both views. Plain neutral light-gray background, soft even studio light. Save generated image file as "${assetFileName}". No text, no labels, no logo, no watermark. A reusable character reference card, not an action scene.`;
         } else if (asset.type === 'Location') {
           typeBadgeClass = 'bg-sky-950 text-sky-300 border-sky-800/70';
-          fullImagePrompt = `${stylePrefix}, ${ratio} vertical location reference — one single hero angle of ${asset.name}, showing ${asset.visualDescription}. No characters, no people, no text, no logo, no watermark.`;
+          fullImagePrompt = `[OUTPUT_FILENAME: ${assetFileName}]\n${stylePrefix}, ${ratio} vertical location reference — one single hero angle of ${asset.name} (${assetId}), showing ${asset.visualDescription}. Save generated image file as "${assetFileName}". No characters, no people, no text, no logo, no watermark.`;
         } else {
           typeBadgeClass = 'bg-amber-950 text-amber-300 border-amber-800/70';
-          fullImagePrompt = `${stylePrefix}, ${ratio} isolated object prop reference card of ${asset.name}, ${asset.visualDescription}. Centered hero product view on plain neutral light-gray studio background, crisp detail, soft even lighting. No hands, no characters, no text, no watermark.`;
+          fullImagePrompt = `[OUTPUT_FILENAME: ${assetFileName}]\n${stylePrefix}, ${ratio} isolated object prop reference card of ${asset.name} (${assetId}), ${asset.visualDescription}. Centered hero product view on plain neutral light-gray studio background, crisp detail, soft even lighting. Save generated image file as "${assetFileName}". No hands, no characters, no text, no watermark.`;
         }
 
         const card = document.createElement('div');
         card.className = 'bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg';
         card.innerHTML = `
           <div class="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-slate-800/80">
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
               <span class="font-mono text-xs font-bold text-purple-400">${assetId}</span>
               <span class="text-[10px] px-2 py-0.5 rounded border ${typeBadgeClass} font-semibold uppercase">${asset.type}</span>
               <span class="text-xs font-semibold text-white">${escapeHtml(asset.name)}</span>
+              <button type="button" onclick="copyPlainText('${assetFileName}')" title="Klik untuk salin nama file" class="text-[10px] font-mono bg-slate-950 hover:bg-slate-800 text-emerald-300 border border-slate-700 px-2 py-0.5 rounded flex items-center gap-1">
+                <i class="fa-regular fa-file-image"></i> ${assetFileName}
+              </button>
             </div>
             <button type="button" onclick="copyFieldText('${assetId}_prompt')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium border border-slate-700 transition flex items-center gap-1.5">
               <i class="fa-regular fa-copy"></i> Copy Image Prompt
@@ -1268,11 +1273,16 @@ SAFETY — Original fictional adult characters only. No real people, no celebrit
 
         const card = document.createElement('div');
         card.className = 'bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4';
+        const sceneStartFile = `${sceneId}_startframe.png`;
+        const sceneVideoFile = `${sceneId}.mp4`;
         card.innerHTML = `
           <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800">
-            <div class="flex items-center gap-2.5">
+            <div class="flex flex-wrap items-center gap-2">
               <span class="font-mono text-xs font-bold text-emerald-400">${sceneId}</span>
               <span class="text-[11px] text-slate-400">Part ${sceneNum} of ${scenesList.length}</span>
+              <button type="button" onclick="copyPlainText('${sceneVideoFile}')" title="Salin nama file video" class="text-[10px] font-mono bg-slate-950 hover:bg-slate-800 text-emerald-300 border border-slate-700 px-2 py-0.5 rounded flex items-center gap-1">
+                <i class="fa-solid fa-film"></i> ${sceneVideoFile}
+              </button>
             </div>
             <div class="flex flex-wrap items-center gap-1.5">
               <span class="text-[10px] text-slate-400 mr-1">Assets Used:</span>
@@ -1381,6 +1391,16 @@ SAFETY — Original fictional adult characters only. No real people, no celebrit
       el.select();
       document.execCommand('copy');
       showToast('Prompt berhasil disalin ke clipboard!');
+    }
+
+    function copyPlainText(text) {
+      const temp = document.createElement('textarea');
+      temp.value = text;
+      document.body.appendChild(temp);
+      temp.select();
+      document.execCommand('copy');
+      document.body.removeChild(temp);
+      showToast(`Nama file "${text}" disalin!`);
     }
 
     function showToast(message) {
